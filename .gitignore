@@ -1,4 +1,6 @@
 /.eggs
 /.mypy_cache
-/wrench.egg-info
+/src/wrench.egg-info/
+/build
+/dist
 __pycache__
