@@ -1,6 +1,7 @@
 /.eggs
 /.mypy_cache
-/src/wrench.egg-info/
+/src/passbolt_wrench.egg-info/
 /build
 /dist
+/.pytest_cache
 __pycache__

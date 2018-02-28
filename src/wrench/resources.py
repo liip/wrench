@@ -29,7 +29,8 @@ def resource_matches(resource: Resource, terms: str) -> bool:
     """
     Return `True` if terms are found in the given resource.
     """
-    return any(terms in getattr(resource, attr) for attr in ('name', 'username', 'uri', 'description'))
+    terms = terms.casefold()
+    return any(terms in getattr(resource, attr).casefold() for attr in ('name', 'username', 'uri', 'description'))
 
 
 def to_resource(resource_record: Dict[str, Any]) -> Resource:

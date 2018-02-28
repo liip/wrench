@@ -2,6 +2,8 @@
 from setuptools import find_packages, setup
 
 tests_require = [
+    'pytest',
+    'factory-boy',
 ]
 
 install_requires = [
