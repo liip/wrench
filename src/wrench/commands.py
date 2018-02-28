@@ -19,7 +19,7 @@ import logging
 import os
 import sys
 from enum import Enum
-from typing import Any, Dict, Iterable
+from typing import Any, Callable, Dict, Iterable
 
 import click
 import requests
@@ -62,14 +62,10 @@ def create_session_from_context(ctx_obj: Dict[str, Any]) -> GPGAuthSession:
     return session
 
 
-def create_config_file(path: str) -> Dict[str, Dict[str, str]]:
+def create_config_file(path: str, get_response: Callable[[str], str]) -> Dict[str, Dict[str, str]]:
     """
     Ask the user for configuration values, save them in the configuration file and then return them.
     """
-    def get_response(question):
-        print(question + ": ", end='')
-        return input()
-
     questions = (
         ('server_url', "Passbolt server URL (eg. https://passbolt.example.com)"),
         ('server_fingerprint', "Passbolt server fingerprint"),
@@ -78,6 +74,8 @@ def create_config_file(path: str) -> Dict[str, Dict[str, str]]:
     )
 
     config_values = {'auth': {key: get_response(value) for key, value in questions}}
+
+    os.makedirs(os.path.dirname(path))
     create_config(path, config_values)
 
     return config_values
@@ -90,6 +88,10 @@ def cli(ctx: Any, verbose: bool) -> None:
     """
     Passbolt CLI.
     """
+    def get_config_response(question: str) -> str:
+        print(question + ": ", end='')
+        return input()
+
     if verbose:
         levels = {1: logging.WARNING, 2: logging.INFO, 3: logging.DEBUG}
         logging.basicConfig(level=levels.get(verbose, logging.ERROR))
@@ -98,7 +100,7 @@ def cli(ctx: Any, verbose: bool) -> None:
     try:
         ctx.obj['config'] = parse_config(config_path)
     except FileNotFoundError:
-        ctx.obj['config'] = create_config_file(config_path)
+        ctx.obj['config'] = create_config_file(config_path, get_config_response)
 
     ctx.obj['gpg'] = create_gpg(get_workdir())
 

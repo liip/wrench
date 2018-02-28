@@ -1,6 +1,6 @@
 from wrench.resources import resource_matches
 
-from .factories import ResourceFactory
+from ..factories import ResourceFactory
 
 
 def test_search_ignores_case():
