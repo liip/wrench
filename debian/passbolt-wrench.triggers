@@ -1,0 +1,5 @@
+interest-noawait /usr/bin/python3.4
+interest-noawait /usr/bin/python3.5
+interest-noawait /usr/bin/python3.6
+interest-noawait /usr/bin/python3.7
+interest dh-virtualenv-interpreter-update

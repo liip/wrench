@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+export DH_VIRTUALENV_INSTALL_ROOT=/usr/share/python3/passbolt-wrench-venv
+
+%:
+	dh $@ --with python-virtualenv
+
+override_dh_virtualenv:
+	dh_virtualenv \
+		--python /usr/bin/python3 \
+		--use-system-packages \
+		--setuptools-test
