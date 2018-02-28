@@ -1,0 +1,5 @@
+[auth]
+server_url = https://passbolt.example.com
+server_fingerprint = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+http_username = john.doe
+http_password = 1234
