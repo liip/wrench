@@ -16,6 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 import cmd
+import json
 import pprint
 
 from . import passbolt_api
@@ -38,5 +39,17 @@ class PassboltShell(cmd.Cmd):
             return super().default(line)
 
     def do_get(self, path):
-        response = passbolt_api.get_passbolt_response(self.session, path, {})
+        response = passbolt_api.get_passbolt_response(self.session, path)
+        pprint.pprint(response)
+
+    def do_post(self, arg):
+        args = arg.split(' ', 1)
+
+        if len(args) > 1:
+            path, data = args
+            data = json.loads(data)
+        else:
+            path, data = arg, {}
+
+        response = passbolt_api.get_passbolt_response(self.session, path, method='post', data=data)
         pprint.pprint(response)

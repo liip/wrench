@@ -19,6 +19,8 @@ from typing import Any, Dict, Iterable, Sequence, Tuple, Type, TypeVar
 
 from gnupg import GPG
 
+from .users import User
+
 T = TypeVar('T')
 
 
@@ -34,6 +36,21 @@ def decrypt(data: str, gpg: GPG) -> str:
     Decrypt `data` with `gpg` and return its value.
     """
     return str(gpg.decrypt(data, always_trust=True))
+
+
+def encrypt(data: str, fingerprint: str, gpg: GPG) -> str:
+    """
+    Encrypt data for the given `fingerprint`. The key must be imported in the GPG keys directory first.
+    """
+    return str(gpg.encrypt(data, fingerprint, always_trust=True))
+
+
+def encrypt_for_user(value: str, user: User, gpg: GPG) -> str:
+    """
+    Import the GPG key of the given :class:`User` and return the given `value` encrypted with this user's key.
+    """
+    gpg.import_keys(user.gpg_key.armored_key)
+    return encrypt(data=value, fingerprint=user.gpg_key.fingerprint, gpg=gpg)
 
 
 def dict_to_namedtuple(cls: Type[T], data_dict: Dict[str, Any], **kwargs) -> T:

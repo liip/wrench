@@ -25,6 +25,7 @@ setup(
     author_email='wrench@liip.ch',
     url='https://github.com/liip/wrench',
     install_requires=install_requires,
+    setup_requires=['pytest-runner'],
     license='GPLv3+',
     tests_require=tests_require,
     include_package_data=False,
