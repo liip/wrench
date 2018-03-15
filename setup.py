@@ -9,7 +9,7 @@ tests_require = [
 install_requires = [
     'click>=6.0',
     'requests',
-    'requests_gpgauthlib',
+    'requests_gpgauthlib>=0.1.0',
 ]
 
 
