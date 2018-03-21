@@ -26,6 +26,10 @@ def test_validate_http_url_does_not_raise_error_for_http_url():
     wrench.validators.validate_http_url('http://localhost')
 
 
+def test_validate_http_url_does_not_raise_error_for_https_url():
+    wrench.validators.validate_http_url('https://localhost')
+
+
 def test_validate_recipients_raises_error_for_invalid_choices():
     with pytest.raises(InputValidationError):
         wrench.validators.validate_recipients('jane.doe@example.com', {'john.doe@example.com': 'John'})

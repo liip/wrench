@@ -19,7 +19,7 @@ def validate_http_url(value: str) -> str:
     Return the given value or raise :exc:`InputValidationError` if the given URL doesn't start with http:// or
     https://.
     """
-    if not value.startswith('http://') or value.startswith('https://'):
+    if not value.startswith('http://') and not value.startswith('https://'):
         raise InputValidationError("The value must be a valid HTTP URL.")
 
     return value
