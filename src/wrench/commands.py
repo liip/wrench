@@ -29,7 +29,7 @@ from requests_gpgauthlib.exceptions import GPGAuthException, GPGAuthNoSecretKeyE
 from requests_gpgauthlib.utils import create_gpg, get_workdir, import_user_private_key_from_file
 
 from .config import create_config, parse_config
-from .exceptions import HttpRequestError
+from .exceptions import FingerprintMismatchError, HttpRequestError
 from .io import ask_question
 from .passbolt_shell import PassboltShell
 from .resources import Resource, decrypt_resource, search_resources
@@ -39,6 +39,8 @@ from .utils import encrypt, encrypt_for_user, obj_to_tuples
 from .validators import validate_http_url, validate_non_empty
 
 ExitStatus = Enum('ExitStatus', (('NO_SECRET_KEY', 1), ('SECRET_KEY_IMPORT_ERROR', 2)))
+
+logger = logging.getLogger(__name__)
 
 
 def get_config_path() -> str:
@@ -56,12 +58,17 @@ def create_session_from_context(ctx_obj: Dict[str, Any]) -> GPGAuthSession:
     Return a `GPGAuthSession` from the given click context object.
     """
     session = GPGAuthSession(
-        gpg=ctx_obj['gpg'], server_url=ctx_obj['config']['auth']['server_url'], auth_uri='/auth/',
-        server_fingerprint=ctx_obj['config']['auth']['server_fingerprint'],
+        gpg=ctx_obj['gpg'], server_url=ctx_obj['config']['auth']['server_url']
     )
     session.auth = requests.auth.HTTPBasicAuth(
         ctx_obj['config']['auth']['http_username'], ctx_obj['config']['auth']['http_password']
     )
+
+    if session.server_fingerprint != ctx_obj['config']['auth']['server_fingerprint']:
+        raise FingerprintMismatchError("Server fingerprint {} doesn't match expected fingerprint {}".format(
+            session.server_fingerprint, ctx_obj['config']['auth']['server_fingerprint']
+        ))
+
     session.authenticate()
 
     return session
@@ -243,6 +250,8 @@ def main() -> None:
             "<path_to_key>`.", err=True
         )
         sys.exit(ExitStatus.NO_SECRET_KEY.value)
+    except FingerprintMismatchError as e:
+        click.secho("Error: {}".format(e), err=True)
 
 
 if __name__ == '__main__':

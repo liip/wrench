@@ -1,10 +1,18 @@
 from requests import Response
 
 
-class InputValidationError(Exception):
+class WrenchError(Exception):
     ...
 
 
-class HttpRequestError(Exception):
+class InputValidationError(WrenchError):
+    ...
+
+
+class HttpRequestError(WrenchError):
     def __init__(self, response: Response) -> None:
         self.response = response
+
+
+class FingerprintMismatchError(WrenchError):
+    ...

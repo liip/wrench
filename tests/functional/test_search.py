@@ -1,9 +1,13 @@
 from unittest.mock import patch
 
+import pytest
+from wrench.exceptions import FingerprintMismatchError
+
+from .conftest import default_config
+
 
 @patch('wrench.services.passbolt_api.get_resources')
-@patch('wrench.commands.GPGAuthSession')
-def test_search_doesnt_include_non_matching_resources(GPGAuthSession, get_resources, cli, gpg):
+def test_search_doesnt_include_non_matching_resources(get_resources, cli, gpg):
     get_resources.return_value = [
         {
             'id': '43',
@@ -21,8 +25,7 @@ def test_search_doesnt_include_non_matching_resources(GPGAuthSession, get_resour
 
 
 @patch('wrench.services.passbolt_api.get_resources')
-@patch('wrench.commands.GPGAuthSession')
-def test_search_includes_matching_resources(GPGAuthSession, get_resources, cli, gpg):
+def test_search_includes_matching_resources(get_resources, cli, gpg):
     get_resources.return_value = [
         {
             'id': '42',
@@ -37,3 +40,11 @@ def test_search_includes_matching_resources(GPGAuthSession, get_resources, cli, 
     result = cli('search', ['bank'])
 
     assert 'bank account' in result.output
+
+
+def test_fingerprint_mismatch(cli):
+    config = dict(default_config)
+    config['auth']['server_fingerprint'] = 'A' * 40
+
+    with pytest.raises(FingerprintMismatchError):
+        cli('search', ['bank'], config=config)
