@@ -1,12 +1,23 @@
 import glob
 import os
 import stat
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Tuple
+from unittest.mock import patch
 
 import pytest
 import wrench.commands
 from click.testing import CliRunner
 from gnupg import GPG
+
+
+default_config = {
+    'auth': {
+        'server_url': 'http://localhost',
+        'server_fingerprint': 'F' * 40,
+        'http_username': 'john.doe',
+        'http_password': 'password',
+    }
+}
 
 
 class GpgSandbox:
@@ -91,22 +102,24 @@ def cli(gpg):
 
         cli('search', ['foobar'])
 
-    This will execute `wrench search foobar`. Additional kwargs are passed to the `click.CliRunner.invoke` method.
+    This will execute `wrench search foobar`. You can also use the `config` keyword to pass a config dict (if not
+    provided, the value of `default_config` will be used).
+
+    Additional kwargs are passed to the `click.CliRunner.invoke` method.
     """
-    def inner(cmd: str, args: List[str] = None, **kwargs) -> Any:
+    def inner(cmd: str, args: List[str] = None, config: Mapping[str, Any] = None, **kwargs) -> Any:
         if not args:
             args = []
 
-        return CliRunner(echo_stdin=True).invoke(wrench.commands.cli, [cmd] + args, catch_exceptions=False, obj={
-            'gpg': gpg.gpg,
-            'config': {
-                'auth': {
-                    'server_url': 'http://localhost',
-                    'server_fingerprint': 'F' * 40,
-                    'http_username': 'john.doe',
-                    'http_password': 'password',
-                }
-            }
-        }, **kwargs)
+        if not config:
+            config = dict(default_config)
+
+        with patch('wrench.commands.GPGAuthSession') as GPGAuthSession:
+            GPGAuthSession.return_value.server_fingerprint = 'F' * 40
+
+            return CliRunner(echo_stdin=True).invoke(wrench.commands.cli, [cmd] + args, catch_exceptions=False, obj={
+                'gpg': gpg.gpg,
+                'config': config,
+            }, **kwargs)
 
     return inner
