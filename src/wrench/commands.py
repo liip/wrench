@@ -102,8 +102,19 @@ def create_config_file(path: str, config_values: Dict[str, str]) -> Dict[str, Di
 print_success = functools.partial(click.secho, fg='green')
 
 
+def print_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+
+    from wrench import __version__
+    click.echo("Wrench version {}".format(__version__))
+    ctx.exit()
+
+
 @click.group(context_settings={'help_option_names': ['-h', '--help']})
 @click.option('-v', '--verbose', count=True, help="Make it verbose. Repeat up to 3 times to increase verbosity.")
+@click.option('--version', is_flag=True, expose_value=False, callback=print_version, is_eager=True,
+              help="Print version number and exit.")
 @click.pass_context
 def cli(ctx: Any, verbose: bool) -> None:
     """

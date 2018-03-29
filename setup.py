@@ -1,5 +1,12 @@
 #!/usr/bin/env python
+import os
+import sys
+
 from setuptools import find_packages, setup
+
+wrench_root_dir = os.path.abspath(os.path.dirname(__file__))
+src_root_dir = os.path.join(wrench_root_dir, 'src')
+sys.path.append(src_root_dir)
 
 tests_require = [
     'pytest',
@@ -12,13 +19,14 @@ install_requires = [
     'requests_gpgauthlib>=0.1.0',
 ]
 
+version = __import__('wrench').__version__
 
 setup(
     name='passbolt-wrench',
-    version='0.0.1',
-    package_dir={"": "src"},
+    version=version,
+    package_dir={"": src_root_dir},
     packages=find_packages(
-        where='src'
+        where=src_root_dir
     ),
     description='wrench is a CLI for Passbolt',
     author='The wrench developers',
