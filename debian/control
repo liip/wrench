@@ -6,6 +6,7 @@ Uploaders: Didier 'OdyX' Raboud <odyx@liip.ch>
 Build-Depends: debhelper (>= 11~),
  python3,
  python3-gnupg,
+ python3-distutils,
  dh-virtualenv
 Standards-Version: 4.1.3
 
