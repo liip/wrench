@@ -1,6 +1,8 @@
 #!/usr/bin/make -f
 
 export DH_VIRTUALENV_INSTALL_ROOT=/usr/lib/python3/passbolt-wrench-venv
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
 
 %:
 	dh $@ --with python-virtualenv
