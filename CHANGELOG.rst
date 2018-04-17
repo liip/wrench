@@ -1,6 +1,13 @@
 Changelog
 =========
 
+dev
+---
+
+**Improvements**
+
+- Split terms in ``search`` command and match them separately
+
 0.1.0 (2018-03-29)
 ------------------
 

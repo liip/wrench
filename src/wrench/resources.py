@@ -30,15 +30,22 @@ SharedSecret = namedtuple('SharedSecret', 'resource user permission_type secret'
 
 def resource_matches(resource: Resource, terms: str) -> bool:
     """
-    Return `True` if terms are found in the given resource.
+    Return `True` if terms are found in the given resource. Search is case insensitive, and terms are split at the
+    space character. The resource matches only if all given terms are found in the combination of all the resource
+    fields.
     """
     if not terms:
         return True
 
-    terms = terms.casefold()
-    values = (getattr(resource, attr) for attr in ('name', 'username', 'uri', 'description'))
+    terms_list = terms.casefold().split(' ')
+    resource_str = ' '.join(
+        value.casefold() for value in (
+            getattr(resource, attr) for attr in ('name', 'username', 'uri', 'description')
+        )
+        if value
+    )
 
-    return any(terms in value.casefold() for value in filter(None, values))
+    return all(term in resource_str for term in terms_list)
 
 
 def search_resources(resources: Iterable[Resource], terms: str) -> Sequence[Resource]:
