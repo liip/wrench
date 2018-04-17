@@ -6,9 +6,9 @@ Installation
 
 Before installing wrench, make sure your system has the following software installed:
 
-- `Python 3 <https://www.python.org/downloads/>`_ (wrench doesn't work on Python 2)
+- `Python <https://www.python.org/downloads/>`_ (version >= 3.5)
 - `pipsi <https://github.com/mitsuhiko/pipsi>`_
-- `GnuPG 2 <https://gnupg.org/>`_
+- `GnuPG <https://gnupg.org/>`_ (version >= 2.1)
 
 If you already have pipsi installed, you can skip the next section and jump
 straight to `Installing wrench`_.
