@@ -64,6 +64,24 @@ Add a resource::
 
 To see the list of all wrench commands, run `wrench` without any argument.
 
+Common issues
+-------------
+
+**I'm getting a GPGAuthStage1Exception**
+
+First, take a deep breath, don't panic. Once you've stopped shaking, make sure
+the GnuPG version you're running is at least 2.1 (you can find out by running
+``gpg --version``). If that's not the case, install a newer version.
+
+If it still doesn't work, try to run the following::
+
+  GPG_TTY=$(tty) wrench
+
+If it works, you can make this persistent by adding the following to your
+.bashrc/.zshrc/.whateverrc file (located in your home directory)::
+
+  export GPG_TTY=$(tty)
+
 Contributing
 ------------
 
