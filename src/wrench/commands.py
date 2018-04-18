@@ -152,7 +152,7 @@ def search(ctx: Any, terms: Iterable[str], favourite: bool) -> None:
         }
 
         if field == 'secret':
-            kwargs: Dict[str, Any] = {'fg': 'red', 'bg': 'red'}
+            kwargs = {'fg': 'red', 'bg': 'red'}  # type: Dict[str, Any]
         else:
             kwargs = {'fg': colors.get(field, 'white'), 'bold': True}
 
