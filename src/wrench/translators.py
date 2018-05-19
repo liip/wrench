@@ -134,7 +134,8 @@ def to_local_user(user_data: Dict[str, Any]) -> User:
             'profile': {'first_name': '...', 'last_name': '...'}
         }
     """
-    gpg_key = utils.dict_to_namedtuple(GpgKey, user_data['gpgkey'])
+    # Users might not have a gpgkey set if they've been invited but have not yet created their account
+    gpg_key = utils.dict_to_namedtuple(GpgKey, user_data['gpgkey']) if user_data['gpgkey'] else None
     groups_ids = [group['id'] for group in user_data['groups_users']]
     user = User(id=user_data['id'], username=user_data['username'], first_name=user_data['profile']['first_name'],
                 last_name=user_data['profile']['last_name'], groups_ids=groups_ids, gpg_key=gpg_key)
