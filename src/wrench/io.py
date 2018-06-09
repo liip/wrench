@@ -1,11 +1,28 @@
+# wrench -- A CLI for Passbolt
+# Copyright (C) 2018 Liip SA <wrench@liip.ch>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
 import readline
 from getpass import getpass
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, Optional, Union  # noqa
 
 import click
 
 from .exceptions import InputValidationError
-from .users import User
+from .users import Group, User
 from .validators import validate_recipients
 
 
@@ -46,11 +63,17 @@ def init_autocomplete(choices: Iterable[str]) -> None:
     readline.set_completer(complete)
 
 
-def input_recipients(users: Iterable[User]) -> Iterable[User]:
+def input_recipients(users: Iterable[User], groups: Iterable[Group]) -> Iterable[Union[Group, User]]:
     """
-    Ask the user to select users out of the given `users` and return the selected users.
+    Ask the user to select users out of the given `users` or groups out of the given `groups`, and return an iterable
+    with the selected users and groups.
     """
     users_dict = {user.username: user for user in users}
-    init_autocomplete(users_dict.keys())
+    groups_dict = {group.name: group for group in groups}
+    recipients_dict = dict(users_dict, **groups_dict)  # type: Dict[str, Union[Group, User]]
 
-    return ask_question(label="Recipients", processors=[lambda value: validate_recipients(value, users_dict)])
+    init_autocomplete(recipients_dict.keys())
+
+    return ask_question(label="Recipients", processors=[
+        lambda value: validate_recipients(value, recipients_dict),
+    ])

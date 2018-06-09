@@ -1,6 +1,5 @@
 import factory
-from wrench.resources import PermissionType, Resource, SharedSecret
-from wrench.users import GpgKey, Group, User
+from wrench.models import GpgKey, Group, Permission, PermissionType, Resource, Secret, User
 
 
 class ResourceFactory(factory.Factory):
@@ -45,11 +44,19 @@ class UserFactory(factory.Factory):
     gpg_key = factory.SubFactory(GpgKeyFactory)
 
 
-class SharedSecretFactory(factory.Factory):
+class SecretFactory(factory.Factory):
     class Meta:
-        model = SharedSecret
+        model = Secret
 
     resource = factory.SubFactory(ResourceFactory)
-    user = factory.SubFactory(UserFactory)
-    permission_type = PermissionType.READ.value
+    recipient = factory.SubFactory(UserFactory)
     secret = factory.Faker('password')
+
+
+class PermissionFactory(factory.Factory):
+    class Meta:
+        model = Permission
+
+    resource = factory.SubFactory(ResourceFactory)
+    recipient = factory.SubFactory(UserFactory)
+    permission_type = PermissionType.OWNER.value

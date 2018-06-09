@@ -7,6 +7,7 @@ dev
 **Improvements**
 
 - Split terms in ``search`` command and match them separately
+- Add groups support when sharing a resource
 
 0.1.0 (2018-03-29)
 ------------------

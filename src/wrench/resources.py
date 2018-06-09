@@ -15,17 +15,12 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-from collections import namedtuple
-from enum import Enum
 from typing import Iterable, Sequence
 
 from gnupg import GPG
 
 from . import utils
-
-Resource = namedtuple('Resource', 'id name uri description username secret')
-PermissionType = Enum('PermissionType', [('READ', 1), ('UPDATE', 7), ('OWNER', 15)])
-SharedSecret = namedtuple('SharedSecret', 'resource user permission_type secret')
+from .models import Resource
 
 
 def resource_matches(resource: Resource, terms: str) -> bool:

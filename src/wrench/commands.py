@@ -29,11 +29,13 @@ from requests_gpgauthlib.exceptions import GPGAuthException, GPGAuthNoSecretKeyE
 from requests_gpgauthlib.utils import create_gpg, get_workdir, import_user_private_key_from_file
 
 from .config import create_config, parse_config
+from .context import Context
 from .exceptions import FingerprintMismatchError, HttpRequestError
 from .io import ask_question
+from .models import Group, Resource
 from .passbolt_shell import PassboltShell
-from .resources import Resource, decrypt_resource, search_resources
-from .services import add_resource, get_resources
+from .resources import decrypt_resource, search_resources
+from .services import add_resource, get_groups, get_resources, get_users
 from .sharing import share_resource_interactive
 from .utils import encrypt, encrypt_for_user, obj_to_tuples
 from .validators import validate_http_url, validate_non_empty
@@ -53,7 +55,7 @@ def get_config_path() -> str:
     return config_file
 
 
-def create_session_from_context(ctx_obj: Dict[str, Any]) -> GPGAuthSession:
+def get_session_from_ctx_obj(ctx_obj: Dict[str, Any]) -> GPGAuthSession:
     """
     Return a `GPGAuthSession` from the given click context object.
     """
@@ -72,6 +74,13 @@ def create_session_from_context(ctx_obj: Dict[str, Any]) -> GPGAuthSession:
     session.authenticate()
 
     return session
+
+
+def get_context(ctx_obj: Dict[str, Any]) -> Context:
+    """
+    Create a session based on the given click context object and return a :class:`Context` object with this session.
+    """
+    return Context(session=get_session_from_ctx_obj(ctx_obj), get_users_func=get_users, get_groups_func=get_groups)
 
 
 def config_values_wizard() -> Dict[str, str]:
@@ -168,8 +177,8 @@ def search(ctx: Any, terms: Iterable[str], favourite: bool) -> None:
         ) for field, value in resource_fields)
 
     terms = ' '.join(terms)
-    session = create_session_from_context(ctx.obj)
-    resources = get_resources(session, favourite_only=favourite)
+    context = get_context(ctx.obj)
+    resources = get_resources(context.session, favourite_only=favourite)
 
     output = (
         '\n'.join(get_fields_for_display(decrypt_resource(resource, ctx.obj['gpg'])))
@@ -187,7 +196,8 @@ def add(ctx: Any) -> None:
 
     The command prompts for a name, URL, username, description and secret and then allows to share it with other users.
     """
-    session = create_session_from_context(ctx.obj)
+    context = get_context(ctx.obj)
+    session = context.session
     resource_record = dict([
         ('name', ask_question(label="Name", processors=[validate_non_empty])), ('uri', ask_question(label="URI")),
         ('description', ask_question(label="Description")), ('username', ask_question(label="Username")),
@@ -212,14 +222,17 @@ def add(ctx: Any) -> None:
 
     try:
         recipients = share_resource_interactive(
-            session, added_resource._replace(secret=secret),
-            encrypt_func=functools.partial(encrypt_for_user, gpg=ctx.obj['gpg'])
+            resource=added_resource._replace(secret=secret),
+            encrypt_func=functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']),
+            context=context
         )
     except HttpRequestError as e:
         raise click.ClickException("Error while sharing resource: %s." % e.response.text)
     else:
         if recipients:
-            print_success("Entry successfully shared with {} people.".format(len(recipients)))
+            nb_groups = sum([1 if isinstance(recipient, Group) else 0 for recipient in recipients])
+            nb_users = len(recipients) - nb_groups
+            print_success("Entry successfully shared with {} users and {} groups.".format(nb_users, nb_groups))
 
 
 @cli.command()
@@ -246,9 +259,9 @@ def passbolt_shell(ctx: Any) -> None:
 
     Useful for debugging.
     """
-    session = create_session_from_context(ctx.obj)
+    context = get_context(ctx.obj)
 
-    shell = PassboltShell(session)
+    shell = PassboltShell(context.session)
     shell.cmdloop()
 
 
