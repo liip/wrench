@@ -24,7 +24,7 @@ version = __import__('wrench').__version__
 setup(
     name='passbolt-wrench',
     version=version,
-    package_dir={"": src_root_dir},
+    package_dir={"": 'src'},
     packages=find_packages(
         where=src_root_dir
     ),
