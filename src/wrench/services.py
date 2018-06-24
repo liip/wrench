@@ -29,7 +29,7 @@ def add_resource(session: GPGAuthSession, resource: Resource) -> Resource:
     """
     Add the given `resource` to Passbolt and return the added :class:`Resource` object with its id set.
     """
-    return to_local(passbolt_api.add_resource(session, to_foreign(resource)), Resource)
+    return to_local(passbolt_api.add_resource(session, to_foreign(resource, user=get_current_user(session))), Resource)
 
 
 def get_resources(session: GPGAuthSession, favourite_only: bool = False) -> Iterable[Resource]:
@@ -90,13 +90,10 @@ def share_resource(session: GPGAuthSession, resource_id: str, secrets: Iterable[
     shared with, or the operation will fail. Use `get_permissions` to get the recipients the resource is already shared
     with.
     """
-    secrets_dict = {}  # type: Dict[str, str]
-    permissions_dict = {}  # type: Dict[str, str]
+    if secrets and permissions:
+        data = {
+            'secrets': [to_foreign(secret) for secret in secrets],
+            'permissions': [to_foreign(permission) for permission in permissions],
+        }
 
-    for i, secret in enumerate(secrets):
-        secrets_dict.update(to_foreign(secret, i))
-
-    for i, permission in enumerate(permissions):
-        permissions_dict.update(to_foreign(permission, i))
-
-    passbolt_api.share_resource(session, resource_id=resource_id, data=dict(secrets_dict, **permissions_dict))
+        passbolt_api.share_resource(session, resource_id=resource_id, data=data)

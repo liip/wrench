@@ -26,7 +26,7 @@ def test_add_sends_encrypted_secret(get_session_from_ctx_obj, add_resource, get_
     cli('add')
 
     assert add_resource.called
-    assert gpg.decrypt(add_resource.call_args[0][-1]['Secret[0][data]']) == resource.secret
+    assert gpg.decrypt(add_resource.call_args[0][-1]['secrets'][0]['data']) == resource.secret
 
 
 @patch('wrench.io.getpass')
@@ -58,4 +58,4 @@ def test_add_with_sharing_encrypts_data_for_recipient(get_session_from_ctx_obj, 
 
     assert share_resource.called
     assert share_resource.call_args[1]['resource_id'] == '42'
-    assert gpg.decrypt(share_resource.call_args[1]['data']['Secrets[0][Secret][data]']) == resource.secret
+    assert gpg.decrypt(share_resource.call_args[1]['data']['secrets'][0]['data']) == resource.secret

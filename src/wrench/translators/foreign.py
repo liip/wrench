@@ -20,81 +20,81 @@ from typing import Any, Dict
 from ..models import Group, Permission, Resource, Secret, User
 
 
-def to_foreign_resource(resource: Resource) -> Dict[str, Any]:
+def to_foreign_resource(resource: Resource, user: User) -> Dict[str, Any]:
     """
     Return a data dict representing a resource suitable to be used in Passbolt. Its structure is the following::
 
         {
-            'Resource[id]': '...',
-            'Resource[name]': '...',
-            'Secret[0][data]': '...',
+            'id': '...',
+            'name': '...',
+            'secrets': [{'data': '...'}],
         }
     """
-    secret = Secret(resource=resource, recipient=None, secret=resource.secret)
-    secrets_dict = to_foreign_secret(secret, 0, add_resource_syntax=True)
+    secret = Secret(resource=resource, recipient=user, secret=resource.secret)
+    secrets_dict = to_foreign_secret(secret)
 
     return dict(
-        {'Resource[{}]'.format(key): value for key, value in resource._asdict().items() if key != 'secret'},
-        **secrets_dict
+        {key: value for key, value in resource._asdict().items() if key != 'secret'},
+        **{'secrets': [secrets_dict]}
     )
 
 
-def to_foreign_secret(shared_secret: Secret, index: int, add_resource_syntax: bool = False) -> Dict[str, str]:
+def to_foreign_secret(shared_secret: Secret) -> Dict[str, str]:
     """
     Return a data dict representing a secret to share suitable to be used in Passbolt. Its structure is the following::
 
         {
-            'Secrets[x][Secret][user_id]': '...',
-            'Secrets[x][Secret][resource_id]': '...',
-            'Secrets[x][Secret][data]': '...'
+            'user_id': '...',
+            'resource_id': '...',
+            'data': '...'
         }
 
     Where `x` is the given `index`. If `add_resource_syntax`, the syntax specific to the "add resource" action will be
     used, which is `Secret[x][user_id]` for example.
     """
-    secret_key_syntax = 'Secret[{}]' if add_resource_syntax else 'Secrets[{}][Secret]'
-    secret_key = secret_key_syntax.format(index)
     secret_dict = {
-        secret_key + '[data]': shared_secret.secret,
+        'data': shared_secret.secret,
     }
 
     if shared_secret.recipient and shared_secret.recipient.id:
-        secret_dict[secret_key + '[user_id]'] = shared_secret.recipient.id
+        secret_dict['user_id'] = shared_secret.recipient.id
 
     if shared_secret.resource and shared_secret.resource.id:
-        secret_dict[secret_key + '[resource_id]'] = shared_secret.resource.id
+        secret_dict['resource_id'] = shared_secret.resource.id
 
     return secret_dict
 
 
-def to_foreign_permission(permission: Permission, index: int) -> Dict[str, str]:
+def to_foreign_permission(permission: Permission) -> Dict[str, str]:
     """
     Return a data dict representing a permission, suitable to be used in Passbolt. Its structure is the following::
 
         {
-            'Permissions[x][Permission][isNew]': 'true',
-            'Permissions[x][Permission][aco]': 'Resource',
-            'Permissions[x][Permission][aco_foreign_key]': '...',
-            'Permissions[x][Permission][aro]': 'User',
-            'Permissions[x][Permission][aro_foreign_key]': '...',
-            'Permissions[x][Permission][type]': '...',
+            'isNew': 'true',
+            'aco': 'Resource',
+            'aco_foreign_key': '...',
+            'aro': 'User',
+            'aro_foreign_key': '...',
+            'type': '...',
         }
     """
-    permission_key = 'Permissions[{}][Permission]'.format(index)
-
     return {
-        permission_key + '[isNew]': 'true',
-        permission_key + '[aco]': 'Resource',
-        permission_key + '[aco_foreign_key]': permission.resource.id,
-        permission_key + '[aro]': 'User' if isinstance(permission.recipient, User) else 'Group',
-        permission_key + '[aro_foreign_key]': permission.recipient.id,
-        permission_key + '[type]': str(permission.permission_type),
+        'isNew': 'true',
+        'aco': 'Resource',
+        'aco_foreign_key': permission.resource.id,
+        'aro': 'User' if isinstance(permission.recipient, User) else 'Group',
+        'aro_foreign_key': permission.recipient.id,
+        'type': str(permission.permission_type),
     }
 
 
 def to_foreign_user(user: User) -> Dict[str, Any]:
     return {
-        'gpgkey': {'id': user.gpg_key.id, 'armored_key': user.gpg_key.armored_key, 'fingerprint': user.gpg_key.fingerprint},
+        'gpgkey': {
+            'id': user.gpg_key.id,
+            'armored_key': user.gpg_key.armored_key,
+            'fingerprint': user.gpg_key.fingerprint
+        },
         'groups_users': [{'group_id': group.id, 'user_id': user.id} for group in user.groups_ids],
         'id': user.id,
         'username': user.username,

@@ -35,11 +35,13 @@ def get_passbolt_response(session: GPGAuthSession, path: str, params: Mapping[st
         params = {}
 
     params = dict(base_params, **params)
-    response = getattr(session, method)(session.build_absolute_uri(path), params=params, **kwargs)
+    full_path = session.build_absolute_uri(path)
+    logger.info("Sending Passbolt request to %s with params %s, kwargs %s", full_path, params, kwargs)
+    response = getattr(session, method)(full_path, params=params, **kwargs)
 
     if not response.ok:
-        logger.error("Got non-ok response from server (status code %s). Contents: %s", response.status_code,
-                     response.text)
+        logger.error("Got non-ok response from server (status code %s). Contents: %s. Sent data: %s",
+                     response.status_code, response.text, params)
         raise HttpRequestError(response)
 
     return response.json()['body']
@@ -56,13 +58,13 @@ def get_resources(session: GPGAuthSession, favourite_only: bool) -> Iterable[Dic
     return get_passbolt_response(session, '/resources.json', params)
 
 
-def share_resource(session: GPGAuthSession, resource_id: str, data: Dict[str, str]) -> Dict[str, Any]:
+def share_resource(session: GPGAuthSession, resource_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Share the resource identified by `resource_id` and with the given data. Check
     `translators.foreign.to_foreign_secret` and `translators.foreign.to_shared_permission` for the expected data
     structure.
     """
-    return get_passbolt_response(session, '/share/resource/{}.json'.format(resource_id), method='put', data=data)
+    return get_passbolt_response(session, '/share/resource/{}.json'.format(resource_id), method='put', json=data)
 
 
 def get_users(session: GPGAuthSession, terms: str = None) -> Iterable[Dict[str, Any]]:
@@ -106,7 +108,7 @@ def add_resource(session: GPGAuthSession, resource_data: Mapping[str, Any]) -> D
     """
     Add the given resource to Passbolt. See `translators.foreign.to_foreign_resource` for the expected data structure.
     """
-    return get_passbolt_response(session, '/resources.json', method='post', data=resource_data)
+    return get_passbolt_response(session, '/resources.json', method='post', json=resource_data)
 
 
 def get_resource_permissions(session: GPGAuthSession, resource_id: str) -> Iterable[Mapping[str, Any]]:

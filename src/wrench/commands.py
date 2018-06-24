@@ -35,8 +35,8 @@ from .io import ask_question
 from .models import Group, Resource
 from .passbolt_shell import PassboltShell
 from .resources import decrypt_resource, search_resources
-from .services import add_resource, get_groups, get_resources, get_users
-from .sharing import share_resource_interactive
+from .services import add_resource, get_current_user, get_groups, get_resources, get_users
+from .sharing import share_resource, share_resource_interactive
 from .utils import encrypt, encrypt_for_user, obj_to_tuples
 from .validators import validate_http_url, validate_non_empty
 
@@ -230,7 +230,7 @@ def add(ctx: Any) -> None:
         raise click.ClickException("Error while sharing resource: %s." % e.response.text)
     else:
         if recipients:
-            nb_groups = sum([1 if isinstance(recipient, Group) else 0 for recipient in recipients])
+            nb_groups = len([recipient for recipient in recipients if isinstance(recipient, Group)])
             nb_users = len(recipients) - nb_groups
             print_success("Entry successfully shared with {} users and {} groups.".format(nb_users, nb_groups))
 

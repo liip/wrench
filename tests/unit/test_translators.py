@@ -39,46 +39,50 @@ def test_to_local_resource_with_extra_field_ignores_it():
 
 
 def test_to_foreign_resource():
+    user = UserFactory()
     resource = ResourceFactory()
 
-    assert foreign_translators.to_foreign_resource(resource) == {
-        'Resource[id]': resource.id, 'Resource[name]': resource.name, 'Resource[uri]': resource.uri,
-        'Resource[username]': resource.username, 'Secret[0][data]': resource.secret,
-        'Secret[0][resource_id]': resource.id, 'Resource[description]': resource.description
+    assert foreign_translators.to_foreign_resource(resource, user) == {
+        'id': resource.id, 'name': resource.name, 'uri': resource.uri, 'description': resource.description,
+        'username': resource.username, 'secrets': [{
+            'data': resource.secret,
+            'resource_id': resource.id,
+            'user_id': user.id,
+        }]
     }
 
 
 def test_to_foreign_secret():
     secret = SecretFactory()
-    foreign_secret = foreign_translators.to_foreign_secret(secret, 0)
+    foreign_secret = foreign_translators.to_foreign_secret(secret)
 
     assert foreign_secret == {
-        'Secrets[0][Secret][data]': secret.secret,
-        'Secrets[0][Secret][user_id]': secret.recipient.id,
-        'Secrets[0][Secret][resource_id]': secret.resource.id
+        'data': secret.secret,
+        'user_id': secret.recipient.id,
+        'resource_id': secret.resource.id
     }
 
 
 def test_to_foreign_secret_without_user_id_skips_key():
     secret = SecretFactory(recipient=None)
-    foreign_secret = foreign_translators.to_foreign_secret(secret, 0)
+    foreign_secret = foreign_translators.to_foreign_secret(secret)
 
     assert foreign_secret == {
-        'Secrets[0][Secret][data]': secret.secret,
-        'Secrets[0][Secret][resource_id]': secret.resource.id
+        'data': secret.secret,
+        'resource_id': secret.resource.id
     }
 
 
 def test_to_foreign_permission():
     permission = PermissionFactory()
 
-    assert foreign_translators.to_foreign_permission(permission, 0) == {
-        'Permissions[0][Permission][isNew]': 'true',
-        'Permissions[0][Permission][aco]': 'Resource',
-        'Permissions[0][Permission][aco_foreign_key]': permission.resource.id,
-        'Permissions[0][Permission][aro]': 'User',
-        'Permissions[0][Permission][aro_foreign_key]': permission.recipient.id,
-        'Permissions[0][Permission][type]': '15',
+    assert foreign_translators.to_foreign_permission(permission) == {
+        'isNew': 'true',
+        'aco': 'Resource',
+        'aco_foreign_key': permission.resource.id,
+        'aro': 'User',
+        'aro_foreign_key': permission.recipient.id,
+        'type': '15',
     }
 
 
