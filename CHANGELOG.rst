@@ -10,6 +10,7 @@ dev
 - Add groups support when sharing a resource
 - Allow setting default recipients in the configuration file
 - Add support for tags
+- Add ``import_resources`` command
 
 0.1.0 (2018-03-29)
 ------------------

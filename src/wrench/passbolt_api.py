@@ -51,7 +51,7 @@ def get_resources(session: GPGAuthSession, favourite_only: bool) -> Iterable[Dic
     """
     Return a list of resource dicts from Passbolt.
     """
-    params = {'contain[secret]': 1}
+    params = {'contain[secret]': 1, 'contain[tag]': 1}
     if favourite_only:
         params['filter[is-favorite]'] = 1
 

@@ -30,7 +30,7 @@ from requests_gpgauthlib.utils import create_gpg, get_workdir, import_user_priva
 
 from .config import create_config, parse_config
 from .context import Context
-from .exceptions import FingerprintMismatchError, HttpRequestError
+from .exceptions import FingerprintMismatchError, HttpRequestError, ImportParseError
 from .io import ask_question, input_recipients, split_csv
 from .models import Group, Resource, User
 from .passbolt_shell import PassboltShell
@@ -125,19 +125,24 @@ def print_version(ctx, param, value):
     ctx.exit()
 
 
+def get_recipient_by_name(name: str, context: Context) -> Union[Group, User]:
+    """
+    Given a recipient name (e-mail address or group name), return the corresponding `User` or `Group` object. The group
+    matching is only checked if no user e-mail address matches the given `name`.
+    """
+    try:
+        recipient = context.users_by_name[name]
+    except KeyError:
+        recipient = context.groups_by_name[name]
+
+    return recipient
+
+
 def get_default_recipients(config: Dict[str, Any], context: Context) -> List[Union[Group, User]]:
     """
     Return the config value `[sharing] default_recipients` as an iterable of `Group` and/or `User` objects. If any
     recipient cannot be found in the list, a `KeyError` will be raised.
     """
-    def get_recipient_by_name(name: str) -> Union[Group, User]:
-        try:
-            recipient = context.users_by_name[name]
-        except KeyError:
-            recipient = context.groups_by_name[name]
-
-        return recipient
-
     try:
         recipients = (
             recipient.strip() for recipient in config['sharing']['default_recipients'].split(',')
@@ -145,7 +150,13 @@ def get_default_recipients(config: Dict[str, Any], context: Context) -> List[Uni
     except KeyError:
         recipient_objs = []  # type: List[Union[Group, User]]
     else:
-        recipient_objs = [get_recipient_by_name(recipient) for recipient in recipients]
+        try:
+            recipient_objs = [get_recipient_by_name(recipient, context) for recipient in recipients]
+        except KeyError as e:
+            raise click.ClickException(
+                "Invalid default recipient %s. Please fix the value of the `default_recipients` setting in the"
+                " `[sharing]` section of your configuration file." % e
+            )
 
     return recipient_objs
 
@@ -230,13 +241,7 @@ def add(ctx: Any) -> None:
     session = context.session
     # Get the list of recipients as soon as possible so that we can show an early error if it contains invalid
     # recipients
-    try:
-        default_recipients = get_default_recipients(ctx.obj['config'], context)
-    except KeyError as e:
-        raise click.ClickException(
-            "Invalid default recipient %s. Please fix the value of the `default_recipients` setting in the `[sharing]`"
-            " section of your configuration file." % e
-        )
+    default_recipients = get_default_recipients(ctx.obj['config'], context)
 
     resource_record = dict([
         ('name', ask_question(label="Name", processors=[validate_non_empty])), ('uri', ask_question(label="URI")),
@@ -255,14 +260,14 @@ def add(ctx: Any) -> None:
     except HttpRequestError as e:
         raise click.ClickException("Error while adding resource: %s." % e.response.text)
 
-    print_success("\nEntry '{}' successfully saved.\n".format(resource_record['name']))
+    print_success("\nResource '{}' successfully saved.\n".format(resource_record['name']))
     click.echo(
-        "If you would like to share it, enter e-mail addresses below, separated by commas."
+        "If you would like to share it, enter e-mail addresses or group names below, separated by commas."
         " Auto completion through Tab key is supported."
     )
 
     if default_recipients:
-        click.echo("The entry will be shared with the following recipients: %s" % click.style(", ".join(
+        click.echo("The resource will also be shared with the following recipients: %s" % click.style(", ".join(
             str(recipient) for recipient in default_recipients
         ), fg='yellow'))
 
@@ -280,7 +285,7 @@ def add(ctx: Any) -> None:
             if recipients:
                 nb_groups = len([recipient for recipient in recipients if isinstance(recipient, Group)])
                 nb_users = len(recipients) - nb_groups
-                print_success("Entry successfully shared with {} users and {} groups.".format(nb_users, nb_groups))
+                print_success("Resource successfully shared with {} users and {} groups.".format(nb_users, nb_groups))
 
 
 @cli.command()
@@ -297,6 +302,66 @@ def import_key(ctx: Any, path: str) -> None:
         sys.exit(ExitStatus.SECRET_KEY_IMPORT_ERROR.value)
     else:
         click.echo("Key {} successfully imported.".format(fingerprint))
+
+
+@cli.command()
+@click.argument('path', type=click.Path(exists=True))
+@click.option('--tag', '-t', multiple=True, help="Tag to assign to the imported resources. Can be repeated multiple"
+                                                 " times.")
+@click.pass_context
+def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
+    """
+    Import the given resources file into Passbolt.
+
+    The file should be in CSV format, using tabs as separators, and contain 5 fields:
+
+        host<TAB>username<TAB>password<TAB>description<TAB>product
+
+    The first line is considered as the header and will be ignored.
+    """
+    def get_resources(lines):
+        nb_header_lines = 1
+        for lineno, line in enumerate(lines[nb_header_lines:], 1):
+            try:
+                host, username, password, description, product = line.split('\t')
+            except ValueError:
+                raise ImportParseError(lineno + nb_header_lines)
+            else:
+                yield host, username, password, description, product
+
+    with open(path) as resource_file:
+        resource_lines = resource_file.readlines()
+
+    try:
+        for resource in get_resources(resource_lines):
+            pass
+    except ImportParseError as e:
+        raise click.ClickException(
+            "Could not split line {} of {} in 5 parts. Please check that it contains 4 tabs.".format(e.lineno, path)
+        )
+
+    context = get_context(ctx.obj)
+    click.echo(
+        "If you would like to share the resources after import, enter e-mail addresses or group names below, separated"
+        " by commas. Auto completion through Tab key is supported."
+    )
+    default_recipients = get_default_recipients(ctx.obj['config'], context)
+    if default_recipients:
+        click.echo("The imported resources will also be shared with the following recipients: %s" %
+                   click.style(", ".join(str(recipient) for recipient in default_recipients), fg='yellow'))
+
+    recipients = default_recipients + input_recipients(context.users, context.groups)
+    tag = [('#' + t if not t.startswith('#') else t) for t in tag]
+
+    for host, username, password, description, product in get_resources(resource_lines):
+        secret = encrypt(data=password, fingerprint=context.session.user_fingerprint, gpg=ctx.obj['gpg'])
+        resource = Resource(id=None, uri=host, name=product, description=description, username=username, secret=secret,
+                            tags=tag)
+        new_resource = add_resource(context.session, resource=resource)._replace(secret=password)
+        share_resource(new_resource, recipients, functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']), context)
+
+    nb_imported_resources = len(resource_lines) - 1
+    click.echo("{} resources successfully imported.".format(nb_imported_resources))
 
 
 @cli.command()
