@@ -1,14 +1,15 @@
 from uuid import uuid4
 
 import pytest
-from wrench import translators
+from wrench.translators import foreign as foreign_translators
+from wrench.translators import local as local_translators
 
-from ..factories import GroupFactory, ResourceFactory, SharedSecretFactory, UserFactory
+from ..factories import GroupFactory, PermissionFactory, ResourceFactory, SecretFactory, UserFactory
 
 
 def test_to_local_resource():
     resource = ResourceFactory()
-    generated_resource = translators.to_local_resource({
+    generated_resource = local_translators.to_local_resource({
         'id': resource.id, 'name': resource.name, 'uri': resource.uri, 'description': resource.description,
         'username': resource.username, 'secrets': [{'data': resource.secret}]
     })
@@ -24,12 +25,12 @@ def test_to_local_resource_with_missing_field_raises_error(field):
     del values[field]
 
     with pytest.raises(TypeError):
-        translators.to_local_resource(values)
+        local_translators.to_local_resource(values)
 
 
 def test_to_local_resource_with_extra_field_ignores_it():
     resource = ResourceFactory()
-    generated_resource = translators.to_local_resource({
+    generated_resource = local_translators.to_local_resource({
         'id': resource.id, 'name': resource.name, 'uri': resource.uri, 'description': resource.description,
         'username': resource.username, 'secrets': [{'data': resource.secret}], 'extra': 'foo'
     })
@@ -40,64 +41,44 @@ def test_to_local_resource_with_extra_field_ignores_it():
 def test_to_foreign_resource():
     resource = ResourceFactory()
 
-    assert translators.to_foreign_resource(resource) == {
+    assert foreign_translators.to_foreign_resource(resource) == {
         'Resource[id]': resource.id, 'Resource[name]': resource.name, 'Resource[uri]': resource.uri,
         'Resource[username]': resource.username, 'Secret[0][data]': resource.secret,
-        'Resource[description]': resource.description
+        'Secret[0][resource_id]': resource.id, 'Resource[description]': resource.description
     }
 
 
 def test_to_foreign_secret():
-    user_id = str(uuid4())
-    secret = translators.to_foreign_secret(0, user_id, 'secret')
+    secret = SecretFactory()
+    foreign_secret = foreign_translators.to_foreign_secret(secret, 0)
 
-    assert secret == {'Secret[0][data]': 'secret', 'Secret[0][user_id]': user_id}
-
-
-def test_to_foreign_secret_without_user_id_skips_key():
-    secret = translators.to_foreign_secret(0, None, 'secret')
-
-    assert secret == {'Secret[0][data]': 'secret'}
-
-
-def test_to_foreign_secrets():
-    secrets = (
-        ('42', "secret 0"),
-        ('43', "secret 1"),
-        (None, "secret 2"),
-    )
-
-    assert translators.to_foreign_secrets(secrets) == {
-        'Secret[0][data]': 'secret 0',
-        'Secret[0][user_id]': '42',
-        'Secret[1][data]': 'secret 1',
-        'Secret[1][user_id]': '43',
-        'Secret[2][data]': 'secret 2',
+    assert foreign_secret == {
+        'Secrets[0][Secret][data]': secret.secret,
+        'Secrets[0][Secret][user_id]': secret.recipient.id,
+        'Secrets[0][Secret][resource_id]': secret.resource.id
     }
 
 
-def test_to_foreign_shared_secrets():
-    shared_secrets = SharedSecretFactory.build_batch(2)
+def test_to_foreign_secret_without_user_id_skips_key():
+    secret = SecretFactory(recipient=None)
+    foreign_secret = foreign_translators.to_foreign_secret(secret, 0)
 
-    assert translators.to_foreign_shared_secrets(shared_secrets) == {
-        'Permissions[0][Permission][isNew]': '1',
+    assert foreign_secret == {
+        'Secrets[0][Secret][data]': secret.secret,
+        'Secrets[0][Secret][resource_id]': secret.resource.id
+    }
+
+
+def test_to_foreign_permission():
+    permission = PermissionFactory()
+
+    assert foreign_translators.to_foreign_permission(permission, 0) == {
+        'Permissions[0][Permission][isNew]': 'true',
         'Permissions[0][Permission][aco]': 'Resource',
-        'Permissions[0][Permission][aco_foreign_key]': shared_secrets[0].resource.id,
+        'Permissions[0][Permission][aco_foreign_key]': permission.resource.id,
         'Permissions[0][Permission][aro]': 'User',
-        'Permissions[0][Permission][aro_foreign_key]': shared_secrets[0].user.id,
-        'Permissions[0][Permission][type]': '1',
-        'Secrets[0][Secret][user_id]': shared_secrets[0].user.id,
-        'Secrets[0][Secret][resource_id]': shared_secrets[0].resource.id,
-        'Secrets[0][Secret][data]': shared_secrets[0].secret,
-        'Permissions[1][Permission][isNew]': '1',
-        'Permissions[1][Permission][aco]': 'Resource',
-        'Permissions[1][Permission][aco_foreign_key]': shared_secrets[1].resource.id,
-        'Permissions[1][Permission][aro]': 'User',
-        'Permissions[1][Permission][aro_foreign_key]': shared_secrets[1].user.id,
-        'Permissions[1][Permission][type]': '1',
-        'Secrets[1][Secret][user_id]': shared_secrets[1].user.id,
-        'Secrets[1][Secret][resource_id]': shared_secrets[1].resource.id,
-        'Secrets[1][Secret][data]': shared_secrets[1].secret,
+        'Permissions[0][Permission][aro_foreign_key]': permission.recipient.id,
+        'Permissions[0][Permission][type]': '15',
     }
 
 
@@ -115,7 +96,7 @@ def test_to_local_user():
         'profile': {'first_name': user.first_name, 'last_name': user.last_name}
     }
 
-    assert translators.to_local_user(user_dict) == user
+    assert local_translators.to_local_user(user_dict) == user
 
 
 def test_to_local_group():
@@ -126,4 +107,4 @@ def test_to_local_group():
         'name': group.name,
     }
 
-    assert translators.to_local_group(group_dict) == group
+    assert local_translators.to_local_group(group_dict) == group

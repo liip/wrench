@@ -92,7 +92,7 @@ def to_foreign_permission(permission: Permission, index: int) -> Dict[str, str]:
     }
 
 
-def to_foreign_user(user: User) -> Dict[str, str]:
+def to_foreign_user(user: User) -> Dict[str, Any]:
     return {
         'gpgkey': {'id': user.gpg_key.id, 'armored_key': user.gpg_key.armored_key, 'fingerprint': user.gpg_key.fingerprint},
         'groups_users': [{'group_id': group.id, 'user_id': user.id} for group in user.groups_ids],
@@ -102,7 +102,7 @@ def to_foreign_user(user: User) -> Dict[str, str]:
     }
 
 
-def to_foreign_group(group: Group) -> Dict[str, str]:
+def to_foreign_group(group: Group) -> Dict[str, Any]:
     return {
         'id': group.id,
         'name': group.name,
