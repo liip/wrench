@@ -18,26 +18,11 @@
 from typing import Callable, Iterable, Sequence, Union
 
 from .context import Context
-from .io import input_recipients
 from .models import Group, Permission, PermissionType, Secret, User
 from .resources import Resource
 from .services import get_permissions
 from .services import share_resource as share_resource_service
 from .users import unfold_groups
-
-
-def share_resource_interactive(resource: Resource, encrypt_func: Callable[[str, User], str],
-                               context: Context) -> Sequence[Union[Group, User]]:
-    """
-    Invite the user to enter a list of recipients to share this resource with. The attribute `resource.secret` *must*
-    be the cleartext secret, so that it can be re-encrypted for each recipient.
-    """
-    recipients = input_recipients(context.users, context.groups)
-
-    if not recipients:
-        return []
-
-    return share_resource(resource, recipients, encrypt_func, context)
 
 
 def share_resource(resource: Resource, recipients: Iterable[Union[User, Group]],

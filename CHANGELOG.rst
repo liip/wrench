@@ -8,6 +8,7 @@ dev
 
 - Split terms in ``search`` command and match them separately
 - Add groups support when sharing a resource
+- Allow setting default recipients in the configuration file
 
 0.1.0 (2018-03-29)
 ------------------

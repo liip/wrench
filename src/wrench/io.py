@@ -17,7 +17,7 @@
 
 import readline
 from getpass import getpass
-from typing import Any, Callable, Dict, Iterable, Optional, Union  # noqa
+from typing import Any, Callable, Dict, Iterable, Optional, List, Union  # noqa
 
 import click
 
@@ -63,7 +63,7 @@ def init_autocomplete(choices: Iterable[str]) -> None:
     readline.set_completer(complete)
 
 
-def input_recipients(users: Iterable[User], groups: Iterable[Group]) -> Iterable[Union[Group, User]]:
+def input_recipients(users: Iterable[User], groups: Iterable[Group]) -> List[Union[Group, User]]:
     """
     Ask the user to select users out of the given `users` or groups out of the given `groups`, and return an iterable
     with the selected users and groups.

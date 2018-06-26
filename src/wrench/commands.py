@@ -20,7 +20,7 @@ import logging
 import os
 import sys
 from enum import Enum
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, List, Union
 
 import click
 import requests
@@ -31,12 +31,12 @@ from requests_gpgauthlib.utils import create_gpg, get_workdir, import_user_priva
 from .config import create_config, parse_config
 from .context import Context
 from .exceptions import FingerprintMismatchError, HttpRequestError
-from .io import ask_question
-from .models import Group, Resource
+from .io import ask_question, input_recipients
+from .models import Group, Resource, User
 from .passbolt_shell import PassboltShell
 from .resources import decrypt_resource, search_resources
-from .services import add_resource, get_current_user, get_groups, get_resources, get_users
-from .sharing import share_resource, share_resource_interactive
+from .services import add_resource, get_groups, get_resources, get_users
+from .sharing import share_resource
 from .utils import encrypt, encrypt_for_user, obj_to_tuples
 from .validators import validate_http_url, validate_non_empty
 
@@ -85,22 +85,27 @@ def get_context(ctx_obj: Dict[str, Any]) -> Context:
 
 def config_values_wizard() -> Dict[str, str]:
     mandatory_question = functools.partial(ask_question, processors=[validate_non_empty])
-    config = dict([
+    auth_config = dict([
         ('server_url', mandatory_question(label="Passbolt server URL (eg. https://passbolt.example.com)",
                                           processors=[validate_non_empty, validate_http_url])),
         ('server_fingerprint', mandatory_question(label="Passbolt server fingerprint")),
         ('http_username', mandatory_question(label="Username for HTTP auth")),
         ('http_password', mandatory_question(label="Password for HTTP auth", secret=True)),
     ])
+    sharing_config = dict([
+        ('default_recipients', ask_question(
+            label="Default recipients for resources (users e-mail addresses or group names, separated by commas)"
+            ))
+        ])
 
-    return config
+    return {'auth': auth_config, 'sharing': sharing_config}
 
 
-def create_config_file(path: str, config_values: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def create_config_file(path: str, config_values: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
     """
-    Ask the user for configuration values, save them in the configuration file and then return them.
+    Save the given `config_values` in the configuration file and return a dict representing the config file.
     """
-    config = {'auth': config_values}
+    config = config_values
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
     create_config(path, config)
@@ -118,6 +123,31 @@ def print_version(ctx, param, value):
     from wrench import __version__
     click.echo("Wrench version {}".format(__version__))
     ctx.exit()
+
+
+def get_default_recipients(config: Dict[str, Any], context: Context) -> List[Union[Group, User]]:
+    """
+    Return the config value `[sharing] default_recipients` as an iterable of `Group` and/or `User` objects. If any
+    recipient cannot be found in the list, a `KeyError` will be raised.
+    """
+    def get_recipient_by_name(name: str) -> Union[Group, User]:
+        try:
+            recipient = context.users_by_name[name]
+        except KeyError:
+            recipient = context.groups_by_name[name]
+
+        return recipient
+
+    try:
+        recipients = (
+            recipient.strip() for recipient in config['sharing']['default_recipients'].split(',')
+        )
+    except KeyError:
+        recipient_objs = []  # type: List[Union[Group, User]]
+    else:
+        recipient_objs = [get_recipient_by_name(recipient) for recipient in recipients]
+
+    return recipient_objs
 
 
 @click.group(context_settings={'help_option_names': ['-h', '--help']})
@@ -198,6 +228,16 @@ def add(ctx: Any) -> None:
     """
     context = get_context(ctx.obj)
     session = context.session
+    # Get the list of recipients as soon as possible so that we can show an early error if it contains invalid
+    # recipients
+    try:
+        default_recipients = get_default_recipients(ctx.obj['config'], context)
+    except KeyError as e:
+        raise click.ClickException(
+            "Invalid default recipient %s. Please fix the value of the `default_recipients` setting in the `[sharing]`"
+            " section of your configuration file." % e
+        )
+
     resource_record = dict([
         ('name', ask_question(label="Name", processors=[validate_non_empty])), ('uri', ask_question(label="URI")),
         ('description', ask_question(label="Description")), ('username', ask_question(label="Username")),
@@ -220,19 +260,26 @@ def add(ctx: Any) -> None:
         " Auto completion through Tab key is supported."
     )
 
-    try:
-        recipients = share_resource_interactive(
-            resource=added_resource._replace(secret=secret),
-            encrypt_func=functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']),
-            context=context
-        )
-    except HttpRequestError as e:
-        raise click.ClickException("Error while sharing resource: %s." % e.response.text)
-    else:
-        if recipients:
-            nb_groups = len([recipient for recipient in recipients if isinstance(recipient, Group)])
-            nb_users = len(recipients) - nb_groups
-            print_success("Entry successfully shared with {} users and {} groups.".format(nb_users, nb_groups))
+    if default_recipients:
+        click.echo("The entry will be shared with the following recipients: %s" % click.style(", ".join(
+            str(recipient) for recipient in default_recipients
+        ), fg='yellow'))
+
+    recipients = default_recipients + input_recipients(context.users, context.groups)
+
+    if recipients:
+        try:
+            share_resource(
+                added_resource._replace(secret=secret), recipients,
+                functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']), context
+            )
+        except HttpRequestError as e:
+            raise click.ClickException("Error while sharing resource: %s." % e.response.text)
+        else:
+            if recipients:
+                nb_groups = len([recipient for recipient in recipients if isinstance(recipient, Group)])
+                nb_users = len(recipients) - nb_groups
+                print_success("Entry successfully shared with {} users and {} groups.".format(nb_users, nb_groups))
 
 
 @cli.command()

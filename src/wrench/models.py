@@ -39,11 +39,13 @@ class Resource(IdEqualityMixin, namedtuple('Resource', 'id name uri description 
 
 
 class Group(IdEqualityMixin, namedtuple('Group', 'id name members_ids')):
-    pass
+    def __str__(self):
+        return self.name
 
 
 class User(IdEqualityMixin, namedtuple('User', 'id username first_name last_name groups_ids gpg_key')):
-    pass
+    def __str__(self):
+        return self.username
 
 
 class GpgKey(IdEqualityMixin, namedtuple('GpgKey', 'id fingerprint armored_key')):
