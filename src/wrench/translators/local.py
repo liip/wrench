@@ -26,15 +26,17 @@ def to_local_resource(data: Dict[str, Any]) -> Resource:
     Return a :class:`Resource` object created from the values from the given `data`. which is expected to be a dict
     with the following keys (extra fields are ignored)::
 
-        ('id', 'name', 'uri', 'description', 'username', 'secrets')
+        ('id', 'name', 'uri', 'description', 'username', 'secrets', 'tags')
 
     The `secrets` key is expected to contain a list of dicts in the form `{'data': '...'}`.
     """
+    tags = [tag['slug'] for tag in data.pop('tags', [])]
+
     # Make sure the exception is the same whether the secret or any other field is missing
     try:
-        resource_data = dict(data, secret=data['secrets'][0]['data'])
+        resource_data = dict(data, secret=data['secrets'][0]['data'], tags=tags)
     except (IndexError, KeyError):
-        resource_data = data
+        resource_data = dict(data, tags=tags)
 
     return utils.dict_to_namedtuple(Resource, resource_data)
 
@@ -85,7 +87,7 @@ def to_local_permission(permission_data: Mapping[str, Any], groups_cache: Mappin
     `groups_cache` and `users_cache` to match ids to real objects.
     """
     resource_id = permission_data['aco_foreign_key']
-    resource = Resource(id=resource_id, name=None, uri=None, description=None, username=None, secret=None)
+    resource = Resource(id=resource_id, name=None, uri=None, description=None, username=None, secret=None, tags=[])
     permission_type = PermissionType(int(permission_data['type']))
 
     cache = None  # type: Union[Mapping[str, User], Mapping[str, Group]]

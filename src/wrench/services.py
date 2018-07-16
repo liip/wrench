@@ -29,7 +29,15 @@ def add_resource(session: GPGAuthSession, resource: Resource) -> Resource:
     """
     Add the given `resource` to Passbolt and return the added :class:`Resource` object with its id set.
     """
-    return to_local(passbolt_api.add_resource(session, to_foreign(resource, user=get_current_user(session))), Resource)
+    tags = resource.tags
+    resource = to_local(
+        passbolt_api.add_resource(session, to_foreign(resource, user=get_current_user(session))), Resource
+    )._replace(tags=tags)
+
+    if tags:
+        passbolt_api.add_tags(session, resource.id, {'Tags': tags})
+
+    return resource
 
 
 def get_resources(session: GPGAuthSession, favourite_only: bool = False) -> Iterable[Resource]:

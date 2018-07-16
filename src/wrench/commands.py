@@ -31,7 +31,7 @@ from requests_gpgauthlib.utils import create_gpg, get_workdir, import_user_priva
 from .config import create_config, parse_config
 from .context import Context
 from .exceptions import FingerprintMismatchError, HttpRequestError
-from .io import ask_question, input_recipients
+from .io import ask_question, input_recipients, split_csv
 from .models import Group, Resource, User
 from .passbolt_shell import PassboltShell
 from .resources import decrypt_resource, search_resources
@@ -241,6 +241,7 @@ def add(ctx: Any) -> None:
     resource_record = dict([
         ('name', ask_question(label="Name", processors=[validate_non_empty])), ('uri', ask_question(label="URI")),
         ('description', ask_question(label="Description")), ('username', ask_question(label="Username")),
+        ('tags', ask_question(label="Tags (separated by commas, use # sign for public tags)", processors=[split_csv])),
     ])
     secret = ask_question(label="Secret", secret=True, processors=[validate_non_empty])
 

@@ -12,6 +12,7 @@ class ResourceFactory(factory.Factory):
     description = factory.Faker('sentence')
     username = factory.Faker('user_name')
     secret = factory.Faker('password')
+    tags = []
 
 
 class GpgKeyFactory(factory.Factory):

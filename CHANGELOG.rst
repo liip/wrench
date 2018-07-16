@@ -9,6 +9,7 @@ dev
 - Split terms in ``search`` command and match them separately
 - Add groups support when sharing a resource
 - Allow setting default recipients in the configuration file
+- Add support for tags
 
 0.1.0 (2018-03-29)
 ------------------

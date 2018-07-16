@@ -77,3 +77,10 @@ def input_recipients(users: Iterable[User], groups: Iterable[Group]) -> List[Uni
     return ask_question(label="Recipients", processors=[
         lambda value: validate_recipients(value, recipients_dict),
     ])
+
+
+def split_csv(input_str: str) -> List[str]:
+    """
+    Split the given `input_str` on the comma character and return the resulting list.
+    """
+    return [value.strip() for value in input_str.split(",")]

@@ -16,7 +16,7 @@ def test_add_sends_encrypted_secret(get_session_from_ctx_obj, add_resource, get_
     encrypted_resource = resource._replace(secret=gpg.encrypt(resource.secret, 'john.doe'), id='42')
     users = UserFactory.build_batch(2)
 
-    input.side_effect = (resource.name, resource.uri, resource.description, resource.username, '')
+    input.side_effect = (resource.name, resource.uri, resource.description, resource.username, '', '')
     getpass.return_value = resource.secret
     get_session_from_ctx_obj.return_value.user_fingerprint = gpg.get_fingerprint('john.doe')
     add_resource.return_value = to_foreign_resource_response(encrypted_resource)
@@ -27,6 +27,31 @@ def test_add_sends_encrypted_secret(get_session_from_ctx_obj, add_resource, get_
 
     assert add_resource.called
     assert gpg.decrypt(add_resource.call_args[0][-1]['secrets'][0]['data']) == resource.secret
+
+
+@patch('wrench.io.getpass')
+@patch('wrench.io.input')
+@patch('wrench.services.passbolt_api.get_user')
+@patch('wrench.services.passbolt_api.get_users')
+@patch('wrench.services.passbolt_api.add_resource')
+@patch('wrench.services.passbolt_api.add_tags')
+@patch('wrench.commands.get_session_from_ctx_obj')
+def test_tags_are_set(get_session_from_ctx_obj, add_tags, add_resource, get_users, get_user, input, getpass, cli, gpg):
+    resource = ResourceFactory(id=None)
+    encrypted_resource = resource._replace(secret=gpg.encrypt(resource.secret, 'john.doe'), id='42')
+    user = UserFactory()
+
+    input.side_effect = (resource.name, resource.uri, resource.description, resource.username, 'foo, bar,  #pub', '')
+    getpass.return_value = resource.secret
+    get_session_from_ctx_obj.return_value.user_fingerprint = gpg.get_fingerprint('john.doe')
+    add_resource.return_value = to_foreign_resource_response(encrypted_resource)
+    get_users.return_value = [to_foreign_user_response(user)]
+    get_user.return_value = to_foreign_user_response(user)
+
+    cli('add')
+
+    assert add_tags.called
+    assert add_tags.call_args[0][1:] == ('42', {'Tags': ['foo', 'bar', '#pub']})
 
 
 @patch('wrench.io.getpass')
@@ -47,7 +72,7 @@ def test_add_with_sharing_encrypts_data_for_recipient(get_session_from_ctx_obj, 
     users = (UserFactory(**user_factory_key_args('john.doe')),
              UserFactory(**user_factory_key_args('alicia.doe')))
 
-    input.side_effect = (resource.name, resource.uri, resource.description, resource.username, users[1].username)
+    input.side_effect = (resource.name, resource.uri, resource.description, resource.username, '', users[1].username)
     getpass.return_value = resource.secret
     get_session_from_ctx_obj.return_value.user_fingerprint = gpg.get_fingerprint('john.doe')
     add_resource.return_value = to_foreign_resource_response(encrypted_resource)

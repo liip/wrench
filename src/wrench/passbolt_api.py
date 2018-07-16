@@ -116,3 +116,11 @@ def get_resource_permissions(session: GPGAuthSession, resource_id: str) -> Itera
     Return the existing permissions of the given resource id.
     """
     return get_passbolt_response(session, '/permissions/resource/{}.json'.format(resource_id))
+
+
+def add_tags(session: GPGAuthSession, resource_id: str, tag_data: Dict[str, Any]) -> None:
+    """
+    Add the given `tag_data` to the resource identified by `resource_id`. `tag_data` should be a dict in the form
+    `{'Tags': ['tag1', 'tag2', '#public_tag_1']}`.
+    """
+    return get_passbolt_response(session, '/tags/{}.json'.format(resource_id), json=tag_data, method='post')

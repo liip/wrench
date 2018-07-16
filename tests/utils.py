@@ -23,4 +23,5 @@ def to_foreign_resource_response(resource: Resource) -> Dict[str, Any]:
         'uri': resource.uri,
         'description': resource.description,
         'secret': resource.secret,
+        'tags': resource.tags,
     }
