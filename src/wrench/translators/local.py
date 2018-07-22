@@ -34,9 +34,9 @@ def to_local_resource(data: Dict[str, Any]) -> Resource:
 
     # Make sure the exception is the same whether the secret or any other field is missing
     try:
-        resource_data = dict(data, secret=data['secrets'][0]['data'], tags=tags)
+        resource_data = dict(data, secret=None, encrypted_secret=data['secrets'][0]['data'], tags=tags)
     except (IndexError, KeyError):
-        resource_data = dict(data, tags=tags)
+        resource_data = dict(data, secret=None, tags=tags)
 
     return utils.dict_to_namedtuple(Resource, resource_data)
 
@@ -84,10 +84,12 @@ def to_local_permission(permission_data: Mapping[str, Any], groups_cache: Mappin
                         users_cache: Mapping[str, User]) -> Permission:
     """
     Return a :class:`Permission` object created from the given `permission_data` dict, and populated with the
-    `groups_cache` and `users_cache` to match ids to real objects.
+    `groups_cache` and `users_cache` to match ids to real objects. The `resource` attribute of the returned
+    `Permission` object will only have its id populated.
     """
     resource_id = permission_data['aco_foreign_key']
-    resource = Resource(id=resource_id, name=None, uri=None, description=None, username=None, secret=None, tags=[])
+    resource = Resource(id=resource_id, name=None, uri=None, description=None, username=None, encrypted_secret=None,
+                        secret=None, tags=[])
     permission_type = PermissionType(int(permission_data['type']))
 
     cache = None  # type: Union[Mapping[str, User], Mapping[str, Group]]

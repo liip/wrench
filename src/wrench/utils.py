@@ -19,6 +19,7 @@ from typing import Any, Dict, Iterable, Sequence, Tuple, Type, TypeVar
 
 from gnupg import GPG
 
+from .exceptions import DecryptionError
 from .users import User
 
 T = TypeVar('T')
@@ -35,7 +36,12 @@ def decrypt(data: str, gpg: GPG) -> str:
     """
     Decrypt `data` with `gpg` and return its value.
     """
-    return str(gpg.decrypt(data, always_trust=True))
+    result = gpg.decrypt(data, always_trust=True)
+
+    if not result.ok:
+        raise DecryptionError(result.status)
+    else:
+        return str(gpg.decrypt(data, always_trust=True))
 
 
 def encrypt(data: str, fingerprint: str, gpg: GPG) -> str:

@@ -1,7 +1,8 @@
 from typing import Any, Dict
 
+from wrench.models import Group, User
 from wrench.resources import Resource
-from wrench.users import User
+from wrench.translators.foreign import to_foreign_group
 
 
 def to_foreign_user_response(user: User) -> Dict[str, Any]:
@@ -22,6 +23,10 @@ def to_foreign_resource_response(resource: Resource) -> Dict[str, Any]:
         'username': resource.username,
         'uri': resource.uri,
         'description': resource.description,
-        'secret': resource.secret,
-        'tags': resource.tags,
+        'secrets': [{'data': resource.encrypted_secret}],
+        'tags': [{'slug': tag for tag in resource.tags}] if resource.tags else [],
     }
+
+
+def to_foreign_group_response(group: Group) -> Dict[str, Any]:
+    return to_foreign_group(group)

@@ -34,9 +34,8 @@ from .exceptions import FingerprintMismatchError, HttpRequestError, ImportParseE
 from .io import ask_question, input_recipients, split_csv
 from .models import Group, Resource, User
 from .passbolt_shell import PassboltShell
-from .resources import decrypt_resource, search_resources
-from .services import add_resource, get_groups, get_resources, get_users
-from .sharing import share_resource
+from .resources import add_resource, decrypt_resource, search_resources, share_resource
+from .services import get_groups, get_resources, get_users
 from .utils import encrypt, encrypt_for_user, obj_to_tuples
 from .validators import validate_http_url, validate_non_empty
 
@@ -233,7 +232,7 @@ def search(ctx: Any, terms: Iterable[str], favourite: bool) -> None:
 @click.pass_context
 def add(ctx: Any) -> None:
     """
-    Add a new secret.
+    Add a new resource.
 
     The command prompts for a name, URL, username, description and secret and then allows to share it with other users.
     """
@@ -250,13 +249,14 @@ def add(ctx: Any) -> None:
     ])
     secret = ask_question(label="Secret", secret=True, processors=[validate_non_empty])
 
-    resource = Resource(
-        **dict(resource_record, id=None,
-               secret=encrypt(data=secret, fingerprint=session.user_fingerprint, gpg=ctx.obj['gpg']))
-    )
+    resource = Resource(**dict(resource_record, id=None, secret=secret, encrypted_secret=None))
 
     try:
-        added_resource = add_resource(session, resource=resource)
+        added_resource = add_resource(
+            resource,
+            encrypt_func=functools.partial(encrypt, fingerprint=session.user_fingerprint, gpg=ctx.obj['gpg']),
+            context=context
+        )
     except HttpRequestError as e:
         raise click.ClickException("Error while adding resource: %s." % e.response.text)
 
@@ -276,8 +276,7 @@ def add(ctx: Any) -> None:
     if recipients:
         try:
             share_resource(
-                added_resource._replace(secret=secret), recipients,
-                functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']), context
+                added_resource, recipients, functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']), context
             )
         except HttpRequestError as e:
             raise click.ClickException("Error while sharing resource: %s." % e.response.text)
@@ -306,8 +305,8 @@ def import_key(ctx: Any, path: str) -> None:
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))
-@click.option('--tag', '-t', multiple=True, help="Tag to assign to the imported resources. Can be repeated multiple"
-                                                 " times.")
+@click.option('--tag', '-t', multiple=True, help="Public tag to assign to the imported resources. Can be repeated"
+                                                 " multiple times.")
 @click.pass_context
 def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
     """
@@ -354,10 +353,13 @@ def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
     tag = [('#' + t if not t.startswith('#') else t) for t in tag]
 
     for host, username, password, description, product in get_resources(resource_lines):
-        secret = encrypt(data=password, fingerprint=context.session.user_fingerprint, gpg=ctx.obj['gpg'])
-        resource = Resource(id=None, uri=host, name=product, description=description, username=username, secret=secret,
-                            tags=tag)
-        new_resource = add_resource(context.session, resource=resource)._replace(secret=password)
+        resource = Resource(id=None, uri=host, name=product, description=description, username=username,
+                            secret=password, encrypted_secret=None, tags=tag)
+        new_resource = add_resource(
+            resource,
+            functools.partial(encrypt, fingerprint=context.session.user_fingerprint, gpg=ctx.obj['gpg']),
+            context
+        )
         share_resource(new_resource, recipients, functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']), context)
 
     nb_imported_resources = len(resource_lines) - 1

@@ -34,7 +34,8 @@ class IdEqualityMixin:
         return hash(self.id)
 
 
-class Resource(IdEqualityMixin, namedtuple('Resource', 'id name uri description username secret tags')):
+class Resource(IdEqualityMixin,
+               namedtuple('Resource', 'id name uri description username secret encrypted_secret tags')):
     pass
 
 

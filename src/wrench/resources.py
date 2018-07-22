@@ -15,12 +15,17 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence, Union
 
 from gnupg import GPG
 
 from . import utils
-from .models import Resource
+from .context import Context
+from .models import Group, Permission, PermissionType, Resource, Secret, User
+from .services import add_resource as add_resource_service
+from .services import get_permissions
+from .services import share_resource as share_resource_service
+from .users import unfold_groups
 
 
 def resource_matches(resource: Resource, terms: str) -> bool:
@@ -54,4 +59,42 @@ def decrypt_resource(resource: Resource, gpg: GPG) -> Resource:
     """
     Return a new `Resource` object with its field `secret` decrypted.
     """
-    return resource._replace(secret=utils.decrypt(resource.secret, gpg))
+    return resource._replace(secret=utils.decrypt(resource.encrypted_secret, gpg))
+
+
+def share_resource(resource: Resource, recipients: Iterable[Union[User, Group]],
+                   encrypt_func: Callable[[str, User], str], context: Context) -> Sequence[Union[Group, User]]:
+    """
+    Share the given resource with the given recipients.
+    """
+    if not recipients:
+        return []
+
+    # Sending an existing Secret or Permission to the Passbolt API returns an error so we need to make sure to strip
+    # any recipients that already have the resource shared with them
+    existing_permissions = get_permissions(session=context.session, resource_id=resource.id,
+                                           users_cache=context.users_by_id, groups_cache=context.groups_by_id)
+    existing_recipients = [permission.recipient for permission in existing_permissions]
+    existing_user_recipients = unfold_groups(existing_recipients, context.users_by_id)
+
+    new_recipients = set(recipients) - set(existing_recipients)
+    unfolded_recipients = unfold_groups(new_recipients, context.users_by_id)
+    new_user_recipients = set(unfolded_recipients) - set(existing_user_recipients)
+
+    secrets = [
+        Secret(resource=resource, recipient=recipient, secret=encrypt_func(resource.secret, recipient))
+        for recipient in new_user_recipients
+    ]
+    permissions = [
+        Permission(resource=resource, recipient=recipient, permission_type=PermissionType.READ.value)
+        for recipient in new_recipients
+    ]
+
+    share_resource_service(context.session, resource.id, secrets, permissions)
+
+    return list(new_recipients)
+
+
+def add_resource(resource: Resource, encrypt_func: Callable[[str], str], context: Context) -> Resource:
+    resource = resource._replace(encrypted_secret=encrypt_func(resource.secret))
+    return add_resource_service(context.session, resource)

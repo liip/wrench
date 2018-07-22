@@ -5,6 +5,10 @@ class WrenchError(Exception):
     ...
 
 
+class DecryptionError(WrenchError):
+    ...
+
+
 class InputValidationError(WrenchError):
     ...
 

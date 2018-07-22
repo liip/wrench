@@ -10,6 +10,7 @@ sys.path.append(src_root_dir)
 
 tests_require = [
     'pytest',
+    'pytest-cov',
     'factory-boy',
 ]
 

@@ -27,12 +27,13 @@ from .translators import to_foreign, to_local
 
 def add_resource(session: GPGAuthSession, resource: Resource) -> Resource:
     """
-    Add the given `resource` to Passbolt and return the added :class:`Resource` object with its id set.
+    Add the given `resource` to Passbolt and return the added :class:`Resource` object with its id and original secret
+    set.
     """
     tags = resource.tags
     resource = to_local(
         passbolt_api.add_resource(session, to_foreign(resource, user=get_current_user(session))), Resource
-    )._replace(tags=tags)
+    )._replace(tags=tags, secret=resource.secret)
 
     if tags:
         passbolt_api.add_tags(session, resource.id, {'Tags': tags})

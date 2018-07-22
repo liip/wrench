@@ -1,45 +1,30 @@
-from unittest.mock import patch
-
 import pytest
 from wrench.exceptions import FingerprintMismatchError
 
-from .conftest import default_config
+from ..conftest import default_config
+from ..factories import EncryptedResourceFactory
+from ..utils import to_foreign_resource_response
 
 
-@patch('wrench.services.passbolt_api.get_resources')
-def test_search_doesnt_include_non_matching_resources(get_resources, cli, gpg):
-    get_resources.return_value = [
-        {
-            'id': '43',
-            'name': 'other account',
-            'username': 'jane.doe',
-            'uri': 'example.com',
-            'description': 'my bank account',
-            'secrets': [{'data': gpg.encrypt('secret', 'john.doe')}]
-        },
-    ]
+def test_search_doesnt_include_non_matching_resources(cli, gpg, users, api):
+    resource = EncryptedResourceFactory(
+        gpg=gpg, recipient=users[0].username, name='bank account', username='jane.doe', uri='example.com',
+        description='my bank account'
+    )
+    api.endpoints['get_resources'] = [to_foreign_resource_response(resource)]
 
     result = cli('search', ['production'])
 
-    assert 'other account' not in result.output
+    assert 'bank account' not in result.output
 
 
-@patch('wrench.services.passbolt_api.get_resources')
-def test_search_includes_matching_resources(get_resources, cli, gpg):
-    get_resources.return_value = [
-        {
-            'id': '42',
-            'name': 'bank account',
-            'username': 'jane.doe',
-            'uri': 'example.com',
-            'description': 'my bank account',
-            'secrets': [{'data': gpg.encrypt('secret', 'john.doe')}]
-        },
-    ]
+def test_search_includes_matching_resources(cli, gpg, users, api):
+    resource = EncryptedResourceFactory(gpg=gpg, recipient=users[0].username, name='bank account')
+    api.endpoints['get_resources'] = [to_foreign_resource_response(resource)]
 
     result = cli('search', ['bank'])
 
-    assert 'bank account' in result.output
+    assert resource.description in result.output
 
 
 def test_fingerprint_mismatch(cli):

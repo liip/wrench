@@ -30,9 +30,9 @@ def to_foreign_resource(resource: Resource, user: User) -> Dict[str, Any]:
             'secrets': [{'data': '...'}],
         }
     """
-    secret = Secret(resource=resource, recipient=user, secret=resource.secret)
+    secret = Secret(resource=resource, recipient=user, secret=resource.encrypted_secret)
     secrets_dict = to_foreign_secret(secret)
-    non_resource_fields = {'secret', 'tags'}
+    non_resource_fields = {'encrypted_secret', 'secret', 'tags'}
 
     return dict(
         {key: value for key, value in resource._asdict().items() if key not in non_resource_fields},
