@@ -61,9 +61,11 @@ def get_session_from_ctx_obj(ctx_obj: Dict[str, Any]) -> GPGAuthSession:
     session = GPGAuthSession(
         gpg=ctx_obj['gpg'], server_url=ctx_obj['config']['auth']['server_url']
     )
-    session.auth = requests.auth.HTTPBasicAuth(
-        ctx_obj['config']['auth']['http_username'], ctx_obj['config']['auth']['http_password']
-    )
+
+    if ctx_obj['config']['auth']['http_username'] or ctx_obj['config']['auth']['http_password']:
+        session.auth = requests.auth.HTTPBasicAuth(
+            ctx_obj['config']['auth']['http_username'], ctx_obj['config']['auth']['http_password']
+        )
 
     if session.server_fingerprint != ctx_obj['config']['auth']['server_fingerprint']:
         raise FingerprintMismatchError("Server fingerprint {} doesn't match expected fingerprint {}".format(
@@ -88,8 +90,8 @@ def config_values_wizard() -> Dict[str, str]:
         ('server_url', mandatory_question(label="Passbolt server URL (eg. https://passbolt.example.com)",
                                           processors=[validate_non_empty, validate_http_url])),
         ('server_fingerprint', mandatory_question(label="Passbolt server fingerprint")),
-        ('http_username', mandatory_question(label="Username for HTTP auth")),
-        ('http_password', mandatory_question(label="Password for HTTP auth", secret=True)),
+        ('http_username', ask_question(label="Username for HTTP auth")),
+        ('http_password', ask_question(label="Password for HTTP auth", secret=True)),
     ])
     sharing_config = dict([
         ('default_recipients', ask_question(
