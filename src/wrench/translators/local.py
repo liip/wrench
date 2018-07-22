@@ -92,9 +92,8 @@ def to_local_permission(permission_data: Mapping[str, Any], groups_cache: Mappin
                         secret=None, tags=[])
     permission_type = PermissionType(int(permission_data['type']))
 
-    cache = None  # type: Union[Mapping[str, User], Mapping[str, Group]]
     if permission_data['aro'] == 'User':
-        cache = users_cache
+        cache = users_cache  # type: Union[Mapping[str, User], Mapping[str, Group]]
     else:
         cache = groups_cache
 

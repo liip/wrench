@@ -16,7 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 import functools
-from typing import Callable, Dict, Iterable
+from typing import Callable, Dict, Iterable, Optional  # noqa
 
 from requests_gpgauthlib import GPGAuthSession
 
@@ -58,10 +58,10 @@ class Context:
         self.session = session
         self.get_users_func = get_users_func
         self.get_groups_func = get_groups_func
-        self._users = None  # type: Iterable[User]
-        self._groups = None  # type: Iterable[Group]
-        self._users_by_id = None  # type: Dict[str, User]
-        self._groups_by_id = None  # type: Dict[str, Group]
+        self._users = None  # type: Optional[Iterable[User]]
+        self._groups = None  # type: Optional[Iterable[Group]]
+        self._users_by_id = None  # type: Optional[Dict[str, User]]
+        self._groups_by_id = None  # type: Optional[Dict[str, Group]]
 
     @property  # type: ignore
     @cached

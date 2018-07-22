@@ -1,4 +1,4 @@
-from typing import Any, Callable, Mapping, Tuple, Type, TypeVar, Union  # noqa
+from typing import Any, Callable, Mapping, Optional, Tuple, Type, TypeVar, Union  # noqa
 
 from . import foreign, local
 from ..models import Group, Permission, Resource, Secret, User
@@ -9,7 +9,7 @@ TRANSLATORS = {
     User: (local.to_local_user, foreign.to_foreign_user),
     Secret: (None, foreign.to_foreign_secret),
     Permission: (local.to_local_permission, foreign.to_foreign_permission),
-}  # type: Mapping[Any, Tuple[Callable, Callable]]
+}  # type: Mapping[Any, Tuple[Optional[Callable], Optional[Callable]]]
 T = TypeVar('T')
 
 
@@ -17,7 +17,7 @@ class TranslatorNotFound(Exception):
     ...
 
 
-def get_translator(entity_type: Any, local: bool) -> Callable:
+def get_translator(entity_type: Any, local: bool) -> Optional[Callable]:
     try:
         return TRANSLATORS[entity_type][0 if local else 1]
     except KeyError:

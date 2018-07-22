@@ -84,7 +84,7 @@ def get_context(ctx_obj: Dict[str, Any]) -> Context:
     return Context(session=get_session_from_ctx_obj(ctx_obj), get_users_func=get_users, get_groups_func=get_groups)
 
 
-def config_values_wizard() -> Dict[str, str]:
+def config_values_wizard() -> Dict[str, Any]:
     mandatory_question = functools.partial(ask_question, processors=[validate_non_empty])
     auth_config = dict([
         ('server_url', mandatory_question(label="Passbolt server URL (eg. https://passbolt.example.com)",
