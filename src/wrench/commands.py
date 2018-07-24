@@ -30,7 +30,7 @@ from requests_gpgauthlib.utils import create_gpg, get_workdir, import_user_priva
 
 from .config import create_config, parse_config
 from .context import Context
-from .exceptions import FingerprintMismatchError, HttpRequestError, ImportParseError
+from .exceptions import DecryptionError, FingerprintMismatchError, HttpRequestError, ImportParseError
 from .io import ask_question, input_recipients, split_csv
 from .models import Group, Resource, User
 from .passbolt_shell import PassboltShell
@@ -222,12 +222,12 @@ def search(ctx: Any, terms: Iterable[str], favourite: bool) -> None:
     context = get_context(ctx.obj)
     resources = get_resources(context.session, favourite_only=favourite)
 
-    output = (
-        '\n'.join(get_fields_for_display(decrypt_resource(resource, ctx.obj['gpg'])))
-        for resource in search_resources(resources, terms)
-    )
-
-    click.echo('\n\n'.join(output))
+    for resource in search_resources(resources, terms):
+        try:
+            click.echo("\n".join(get_fields_for_display(decrypt_resource(resource, ctx.obj['gpg']))) + "\n")
+        except DecryptionError:
+            click.echo(click.style('coucou!', fg='red'))
+            click.echo("Resource with id {} could not be decrypted.".format(resource.id))
 
 
 @cli.command()

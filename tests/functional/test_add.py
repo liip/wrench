@@ -42,6 +42,15 @@ def test_tags_are_set(cli, gpg, api, users):
     assert_tags_added(api, resource, resource.tags)
 
 
+def test_empty_tags_does_not_call_add_tags(cli, gpg, api, users):
+    resource = EncryptedResourceFactory(gpg=gpg, recipient=users[0].username, tags=[])
+    api.endpoints['add_resource'] = to_foreign_resource_response(resource)
+
+    run_add_command(cli, get_add_resource_inputs(resource) + ('',), resource.secret)
+
+    assert not api.mocks['add_tags'].called
+
+
 def test_add_with_sharing_encrypts_data_for_recipient(cli, gpg, api, users):
     resource = EncryptedResourceFactory(gpg=gpg, recipient=users[0].username)
     api.endpoints['add_resource'] = to_foreign_resource_response(resource)

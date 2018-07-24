@@ -81,6 +81,10 @@ def input_recipients(users: Iterable[User], groups: Iterable[Group]) -> List[Uni
 
 def split_csv(input_str: str) -> List[str]:
     """
-    Split the given `input_str` on the comma character and return the resulting list.
+    Split the given `input_str` on the comma character and return the resulting list. If `input_str` is empty, return
+    an empty list.
     """
+    if not input_str:
+        return []
+
     return [value.strip() for value in input_str.split(",")]
