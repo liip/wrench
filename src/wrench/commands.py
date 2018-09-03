@@ -18,9 +18,10 @@
 import functools
 import logging
 import os
+import re
 import sys
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Union
+from typing import Any, Callable, Dict, Iterable, List, Union
 
 import click
 import requests
@@ -54,9 +55,10 @@ def get_config_path() -> str:
     return config_file
 
 
-def get_session_from_ctx_obj(ctx_obj: Dict[str, Any]) -> GPGAuthSession:
+def get_session_from_ctx_obj(ctx_obj: Dict[str, Any], authenticate: bool = True) -> GPGAuthSession:
     """
-    Return a `GPGAuthSession` from the given click context object.
+    Return a `GPGAuthSession` from the given click context object. If `authenticate` is True, authentication will be
+    made against the API.
     """
     session = GPGAuthSession(
         gpg=ctx_obj['gpg'], server_url=ctx_obj['config']['auth']['server_url']
@@ -72,7 +74,8 @@ def get_session_from_ctx_obj(ctx_obj: Dict[str, Any]) -> GPGAuthSession:
             session.server_fingerprint, ctx_obj['config']['auth']['server_fingerprint']
         ))
 
-    session.authenticate()
+    if authenticate:
+        session.authenticate()
 
     return session
 
@@ -367,6 +370,130 @@ def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
 
     nb_imported_resources = len(resource_lines) - 1
     click.echo("{} resources successfully imported.".format(nb_imported_resources))
+
+
+@cli.command()
+@click.pass_context
+def diagnose(ctx: Any):
+    """
+    Run various checks to test wrench installation status.
+    """
+    class DiagnoseError(Exception):
+        pass
+
+    def run_test(func: Callable, description: str) -> bool:
+        """
+        Run the given test function, show its description and the test result, and return True if the test run was
+        successful, or False otherwise.
+        """
+        try:
+            result = func()
+        except AssertionError as e:
+            result = str(e)
+            success = False
+        except Exception as e:
+            result = "Unexpected failure {}".format(e)
+            success = False
+        else:
+            success = True
+
+        prefix = "[{}] ".format(
+            click.style("OK", fg='green', bold=True) if success else click.style("KO", fg='red', bold=True)
+        )
+
+        result = (": " + result) if result else ""
+        click.echo(prefix + description + result)
+
+        return success
+
+    def wrench_version():
+        from . import __version__
+        return __version__
+
+    def python_gnupg_version():
+        from gnupg import __version__
+        return __version__
+
+    def requests_gpgauthlib_version():
+        from gpgauthlib import __version__
+        return __version__
+
+    def gnupg_version():
+        import subprocess
+        result = subprocess.run(['gpg', '--version'], stdout=subprocess.PIPE)
+        stdout = result.stdout.decode()
+        version_line = stdout.splitlines()[0]
+
+        matches = re.search(r'\d+\.\d+(\.\d+)?', version_line)
+        assert matches, "Unable to identify version number in " + version_line
+
+        import itertools
+        version_number = tuple(int(part) for part in matches.group(0).split('.'))
+        version_number += tuple(itertools.repeat(0, 3 - len(version_number)))
+
+        assert version_number >= (2, 1, 0), "gpg version should be >= 2.1.0"
+
+        return '.'.join(str(v) for v in version_number)
+
+    def test_secret_key():
+        secret_keys = ctx.obj['gpg'].list_keys(True)
+        assert len(secret_keys) == 1, "only one secret key should exist, found {}".format(len(secret_keys))
+        return secret_keys[0]['fingerprint']
+
+    def test_encryption():
+        secret_keys = ctx.obj['gpg'].list_keys(True)
+        # TODO check if no secret key
+        secret_key = secret_keys[0]
+        encrypted_data = ctx.obj['gpg'].encrypt('wrench', secret_key['fingerprint'], always_trust=True)
+        assert encrypted_data.ok, "unable to encrypt data ({})".format(encrypted_data.status)
+        decrypted_data = ctx.obj['gpg'].decrypt(str(encrypted_data))
+
+        assert decrypted_data.ok, "unable to decrypt data ({})".format(decrypted_data.status)
+        assert str(decrypted_data) == 'wrench', "decrypted data '{}' does not match original data 'wrench'".format(
+            str(decrypted_data)
+        )
+
+    def test_server_connection():
+        session = get_session_from_ctx_obj(ctx.obj, authenticate=False)
+
+        try:
+            server_fingerprint = session.server_fingerprint
+        except GPGAuthException as e:
+            raise AssertionError("could not verify server fingerprint ({})".format(e))
+        else:
+            expected_fingerprint = ctx.obj['config']['auth']['server_fingerprint']
+            assert server_fingerprint == expected_fingerprint, ("server fingerprint {} does not match expected"
+                                                                " fingerprint {}".format(server_fingerprint,
+                                                                                         expected_fingerprint))
+
+    def test_server_key():
+        server_key_fingerprint = ctx.obj['config']['auth']['server_fingerprint']
+        public_keys = ctx.obj['gpg'].list_keys()
+
+        assert server_key_fingerprint in {key['fingerprint'] for key in public_keys}, "server key not found in keychain"
+
+        return server_key_fingerprint
+
+    def test_server_encryption():
+        server_key_fingerprint = ctx.obj['config']['auth']['server_fingerprint']
+        encrypted_data = ctx.obj['gpg'].encrypt('wrench', server_key_fingerprint, always_trust=True)
+
+        assert encrypted_data.ok, "could not encrypt data with the server key {} ({})".format(
+            server_key_fingerprint, encrypted_data.status
+        )
+
+    tests = (
+        (wrench_version, "Wrench version"),
+        (python_gnupg_version, "python-gnupg version"),
+        (gnupg_version, "GnuPG version"),
+        (test_secret_key, "User secret key exists"),
+        (test_encryption, "Encryption/decryption using user key (passphrase dialog should open)"),
+        (test_server_connection, "Server connection"),
+        (test_server_key, "Server key exists"),
+        (test_server_encryption, "Encryption using server key"),
+    )
+    for func, description in tests:
+        run_test(func, description)
 
 
 @cli.command()

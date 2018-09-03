@@ -14,6 +14,7 @@ dev
 - Make HTTP authentication optional in config wizard
 - Add compatibility for Passbolt 2.2
 - Change questions order when adding a resource
+- Add ``diagnose`` command
 
 0.1.0 (2018-03-29)
 ------------------
