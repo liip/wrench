@@ -12,6 +12,7 @@ dev
 - Add support for tags
 - Add ``import_resources`` command
 - Make HTTP authentication optional in config wizard
+- Add compatibility for Passbolt 2.2
 
 0.1.0 (2018-03-29)
 ------------------

@@ -26,6 +26,18 @@ base_params = {'api-version': 'v2'}
 logger = logging.getLogger(__name__)
 
 
+def get_cookie_by_name(session: GPGAuthSession, cookie_name: str):
+    """
+    Return the the cookie named `cookie_name`. If `cookie_name` is not found in `session`, raise `KeyError`.
+    """
+    try:
+        cookie = [cookie for cookie in session.cookies if cookie.name == cookie_name][0]
+    except IndexError:
+        raise KeyError("Cookie %s doesn't exist in given session" % cookie_name)
+    else:
+        return cookie
+
+
 def get_passbolt_response(session: GPGAuthSession, path: str, params: Mapping[str, Any] = None,
                           method: str = 'get', **kwargs) -> Any:
     """
@@ -37,7 +49,16 @@ def get_passbolt_response(session: GPGAuthSession, path: str, params: Mapping[st
     params = dict(base_params, **params)
     full_path = session.build_absolute_uri(path)
     logger.info("Sending Passbolt request to %s with params %s, kwargs %s", full_path, params, kwargs)
-    response = getattr(session, method)(full_path, params=params, **kwargs)
+    # Passbolt 2.2 added CSRF protection. The CSRF token cookie should be set in the x-csrf-token header. If the cookie
+    # doesn't exit, do not fail for Passbolt < 2.2 compatibility
+    try:
+        csrf_token = get_cookie_by_name(session, 'csrfToken').value
+    except KeyError:
+        headers = {}
+    else:
+        headers = {'x-csrf-token': csrf_token}
+
+    response = getattr(session, method)(full_path, params=params, headers=headers, **kwargs)
 
     if not response.ok:
         logger.error("Got non-ok response from server (status code %s). Contents: %s. Sent data: %s",
