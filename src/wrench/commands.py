@@ -85,19 +85,17 @@ def get_context(ctx_obj: Dict[str, Any]) -> Context:
 
 
 def config_values_wizard() -> Dict[str, Any]:
-    mandatory_question = functools.partial(ask_question, processors=[validate_non_empty])
     auth_config = dict([
-        ('server_url', mandatory_question(label="Passbolt server URL (eg. https://passbolt.example.com)",
+        ('server_url', ask_question(label="Passbolt server URL (eg. https://passbolt.example.com)",
                                           processors=[validate_non_empty, validate_http_url])),
-        ('server_fingerprint', mandatory_question(label="Passbolt server fingerprint")),
+        ('server_fingerprint', ask_question(label="Passbolt server fingerprint", processors=[validate_non_empty])),
         ('http_username', ask_question(label="Username for HTTP auth")),
         ('http_password', ask_question(label="Password for HTTP auth", secret=True)),
     ])
     sharing_config = dict([
         ('default_recipients', ask_question(
-            label="Default recipients for resources (users e-mail addresses or group names, separated by commas)"
-            ))
-        ])
+            label="Default recipients for resources (users e-mail addresses or group names, separated by commas)"))
+    ])
 
     return {'auth': auth_config, 'sharing': sharing_config}
 
@@ -245,13 +243,16 @@ def add(ctx: Any) -> None:
     default_recipients = get_default_recipients(ctx.obj['config'], context)
 
     resource_record = dict([
-        ('name', ask_question(label="Name", processors=[validate_non_empty])), ('uri', ask_question(label="URI")),
-        ('description', ask_question(label="Description")), ('username', ask_question(label="Username")),
-        ('tags', ask_question(label="Tags (separated by commas, use # sign for public tags)", processors=[split_csv])),
+        ('name', ask_question(label="Name", processors=[validate_non_empty])),
+        ('username', ask_question(label="Username")),
+        ('secret', ask_question(label="Secret", secret=True, processors=[validate_non_empty])),
+        ('uri', ask_question(label="URI")),
+        ('description', ask_question(label="Description")),
+        ('tags', ask_question(label="Tags (separated by commas, prefix with # sign for public tags)",
+                              processors=[split_csv])),
     ])
-    secret = ask_question(label="Secret", secret=True, processors=[validate_non_empty])
 
-    resource = Resource(**dict(resource_record, id=None, secret=secret, encrypted_secret=None))
+    resource = Resource(**dict(resource_record, id=None, encrypted_secret=None))
 
     try:
         added_resource = add_resource(

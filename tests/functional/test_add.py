@@ -20,7 +20,7 @@ def get_add_resource_inputs(resource):
     Return a tuple of strings that can be used as a side-effect to the `input` function to simulate the entry of a
     resource in the `add` command.
     """
-    return resource.name, resource.uri, resource.description, resource.username, ', '.join(resource.tags)
+    return resource.name, resource.username, resource.uri, resource.description, ', '.join(resource.tags)
 
 
 def test_add_sends_encrypted_secret(cli, gpg, api, users):
