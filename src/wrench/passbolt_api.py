@@ -54,7 +54,7 @@ def get_passbolt_response(session: GPGAuthSession, path: str, params: Mapping[st
     try:
         csrf_token = get_cookie_by_name(session, 'csrfToken').value
     except KeyError:
-        headers = {}
+        headers = {}  # type: Dict[str, str]
     else:
         headers = {'x-csrf-token': csrf_token}
 

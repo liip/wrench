@@ -8,6 +8,7 @@ dev
 
 - Split terms in ``search`` command and match them separately
 - Add groups support when sharing a resource
+- Allow to set owners and readers when sharing a resource
 - Allow setting default recipients in the configuration file
 - Add support for tags
 - Add ``import_resources`` command

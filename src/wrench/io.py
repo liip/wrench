@@ -35,7 +35,7 @@ def ask_question(label: str, secret: bool = False, processors: Optional[Iterable
     valid_input = False
 
     while not valid_input:
-        value = func(label + ": ")  # type: ignore
+        value = func(label + ": ") if label else func()  # type: ignore
 
         try:
             if processors:
@@ -74,7 +74,7 @@ def input_recipients(users: Iterable[User], groups: Iterable[Group]) -> List[Uni
 
     init_autocomplete(recipients_dict.keys())
 
-    return ask_question(label="Recipients", processors=[
+    return ask_question(label="", processors=[
         lambda value: validate_recipients(value, recipients_dict),
     ])
 

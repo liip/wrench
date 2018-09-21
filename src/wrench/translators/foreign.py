@@ -17,7 +17,7 @@
 
 from typing import Any, Dict
 
-from ..models import Group, Permission, Resource, Secret, User
+from ..models import Group, Permission, PermissionModificationType, Resource, Secret, User
 
 
 def to_foreign_resource(resource: Resource, user: User) -> Dict[str, Any]:
@@ -66,12 +66,13 @@ def to_foreign_secret(shared_secret: Secret) -> Dict[str, str]:
     return secret_dict
 
 
-def to_foreign_permission(permission: Permission) -> Dict[str, str]:
+def to_foreign_permission(permission: Permission,
+                          modification_type: PermissionModificationType = PermissionModificationType.create
+                          ) -> Dict[str, str]:
     """
     Return a data dict representing a permission, suitable to be used in Passbolt. Its structure is the following::
 
         {
-            'isNew': 'true',
             'aco': 'Resource',
             'aco_foreign_key': '...',
             'aro': 'User',
@@ -79,14 +80,29 @@ def to_foreign_permission(permission: Permission) -> Dict[str, str]:
             'type': '...',
         }
     """
-    return {
-        'isNew': 'true',
-        'aco': 'Resource',
-        'aco_foreign_key': permission.resource.id,
-        'aro': 'User' if isinstance(permission.recipient, User) else 'Group',
-        'aro_foreign_key': permission.recipient.id,
-        'type': str(permission.permission_type),
-    }
+    permission_dict = {}
+
+    if permission.id:
+        permission_dict['id'] = permission.id
+
+    if permission.permission_type:
+        permission_dict['type'] = str(permission.permission_type)
+
+    if permission.resource and permission.resource.id:
+        permission_dict['aco'] = 'Resource'
+        permission_dict['aco_foreign_key'] = permission.resource.id
+
+    if permission.recipient and permission.recipient.id:
+        permission_dict['aro'] = 'User' if isinstance(permission.recipient, User) else 'Group'
+        permission_dict['aro_foreign_key'] = permission.recipient.id
+
+    if modification_type == PermissionModificationType.create:
+        permission_dict['isNew'] = 'true'
+
+    if modification_type == PermissionModificationType.delete:
+        permission_dict['delete'] = 1
+
+    return permission_dict
 
 
 def to_foreign_user(user: User) -> Dict[str, Any]:

@@ -21,7 +21,7 @@ from typing import Iterable, Mapping
 from requests_gpgauthlib import GPGAuthSession
 
 from . import passbolt_api
-from .models import Group, Permission, Resource, Secret, User
+from .models import Group, Permission, PermissionModificationType, Resource, Secret, User
 from .translators import to_foreign, to_local
 
 
@@ -92,17 +92,24 @@ def get_permissions(session: GPGAuthSession, resource_id: str, users_cache: Mapp
 
 
 def share_resource(session: GPGAuthSession, resource_id: str, secrets: Iterable[Secret],
-                   permissions: Iterable[Permission]) -> None:
+                   new_permissions: Iterable[Permission], deleted_permissions: Iterable[Permission] = None) -> None:
     """
     Share the resource identified by the given `resource_id`. `secrets` must contain the resource secret encrypted to
     every recipient. It is very important that `secrets` does not contain ids of recipients the resource is already
     shared with, or the operation will fail. Use `get_permissions` to get the recipients the resource is already shared
     with.
     """
-    if secrets and permissions:
+    new_permissions_dicts = [to_foreign(permission) for permission in new_permissions] if new_permissions else []
+    deleted_permissions_dicts = [
+        to_foreign(permission, modification_type=PermissionModificationType.delete)
+        for permission in deleted_permissions
+    ] if deleted_permissions else []
+    permissions = new_permissions_dicts + deleted_permissions_dicts
+
+    if permissions:
         data = {
             'secrets': [to_foreign(secret) for secret in secrets],
-            'permissions': [to_foreign(permission) for permission in permissions],
+            'permissions': permissions,
         }
 
         passbolt_api.share_resource(session, resource_id=resource_id, data=data)

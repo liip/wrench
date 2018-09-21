@@ -104,7 +104,7 @@ def test_import_shares_resources_with_recipients(cli, api, users, gpg, valid_res
 
 def test_import_shares_resources_with_default_recipients(cli, api, users, gpg, valid_resources_file):
     config = copy.deepcopy(default_config)
-    config['sharing']['default_recipients'] = users[1].username
+    config['sharing']['default_owners'] = users[1].username
     resource = get_imported_resource(gpg, users[0].username)
     api.endpoints['add_resource'] = to_foreign_resource_response(resource)
 

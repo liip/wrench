@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-from typing import Callable, Iterable, Sequence, Union
+from typing import Callable, Iterable, Sequence, Tuple, Union
 
 from gnupg import GPG
 
@@ -23,7 +23,7 @@ from . import utils
 from .context import Context
 from .models import Group, Permission, PermissionType, Resource, Secret, User
 from .services import add_resource as add_resource_service
-from .services import get_permissions
+from .services import get_current_user, get_permissions
 from .services import share_resource as share_resource_service
 from .users import unfold_groups
 
@@ -62,8 +62,9 @@ def decrypt_resource(resource: Resource, gpg: GPG) -> Resource:
     return resource._replace(secret=utils.decrypt(resource.encrypted_secret, gpg))
 
 
-def share_resource(resource: Resource, recipients: Iterable[Union[User, Group]],
-                   encrypt_func: Callable[[str, User], str], context: Context) -> Sequence[Union[Group, User]]:
+def share_resource(resource: Resource, recipients: Iterable[Tuple[Union[User, Group], PermissionType]],
+                   encrypt_func: Callable[[str, User], str], context: Context,
+                   delete_existing_permissions: bool = False) -> Sequence[Union[Group, User]]:
     """
     Share the given resource with the given recipients.
     """
@@ -77,7 +78,8 @@ def share_resource(resource: Resource, recipients: Iterable[Union[User, Group]],
     existing_recipients = [permission.recipient for permission in existing_permissions]
     existing_user_recipients = unfold_groups(existing_recipients, context.users_by_id)
 
-    new_recipients = set(recipients) - set(existing_recipients)
+    new_users = [recipient[0] for recipient in recipients]
+    new_recipients = set(new_users) - set(existing_recipients)
     unfolded_recipients = unfold_groups(new_recipients, context.users_by_id)
     new_user_recipients = set(unfolded_recipients) - set(existing_user_recipients)
 
@@ -86,11 +88,21 @@ def share_resource(resource: Resource, recipients: Iterable[Union[User, Group]],
         for recipient in new_user_recipients
     ]
     permissions = [
-        Permission(resource=resource, recipient=recipient, permission_type=PermissionType.READ.value)
-        for recipient in new_recipients
+        Permission(id=None, resource=resource, recipient=recipient, permission_type=permission.value)
+        for recipient, permission in recipients
     ]
+    new_permissions = set(permissions) - set(existing_permissions)
 
-    share_resource_service(context.session, resource.id, secrets, permissions)
+    if delete_existing_permissions:
+        deleted_permissions = [
+            Permission(id=permission.id, resource=None, recipient=None, permission_type=None)
+            for permission in existing_permissions
+        ]
+    else:
+        deleted_permissions = []
+
+    share_resource_service(session=context.session, resource_id=resource.id, secrets=secrets,
+                           new_permissions=new_permissions, deleted_permissions=deleted_permissions)
 
     return list(new_recipients)
 
