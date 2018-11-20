@@ -32,7 +32,7 @@ def invalid_resources_file(tmpdir):
     return resources_file
 
 
-def run_import_resources_command(cli, path, recipients='', tags=None, *args, **kwargs):
+def run_import_resources_command(cli, path, owners='', readers='', tags=None, *args, **kwargs):
     params = [path]
 
     if tags:
@@ -40,8 +40,8 @@ def run_import_resources_command(cli, path, recipients='', tags=None, *args, **k
         params += list(itertools.chain(*tags_params))
 
     with patch('wrench.io.input') as input_mock:
-        input_mock.return_value = recipients
-        return cli('import_resources', params, *args, **kwargs)
+        input_mock.side_effect = [owners, readers]
+        return cli('import-resources', params, *args, **kwargs)
 
 
 def get_imported_resource(gpg, username):
@@ -64,7 +64,7 @@ def test_import_imports_data(cli, tmpdir, api, users, gpg, valid_resources_file)
 
 
 def test_import_with_invalid_record_doesnt_import_anything(cli, invalid_resources_file):
-    result = cli('import_resources', [str(invalid_resources_file)])
+    result = run_import_resources_command(cli, str(invalid_resources_file))
 
     assert result.exit_code == 1
     assert "Could not split line 3" in result.output
@@ -97,7 +97,7 @@ def test_import_shares_resources_with_recipients(cli, api, users, gpg, valid_res
     resource = get_imported_resource(gpg, users[0].username)
     api.endpoints['add_resource'] = to_foreign_resource_response(resource)
 
-    run_import_resources_command(cli, str(valid_resources_file), users[1].username)
+    run_import_resources_command(cli, str(valid_resources_file), owners=users[1].username)
 
     assert_resource_shared(api, resource, [users[1]], gpg)
 
