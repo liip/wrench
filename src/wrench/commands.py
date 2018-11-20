@@ -31,11 +31,11 @@ from requests_gpgauthlib.utils import create_gpg, get_workdir, import_user_priva
 
 from .config import create_config, parse_config
 from .context import Context
-from .exceptions import DecryptionError, FingerprintMismatchError, HttpRequestError, ImportParseError
+from .exceptions import DecryptionError, FingerprintMismatchError, HttpRequestError, ImportParseError, ValidationError
 from .io import ask_question, input_recipients, split_csv
 from .models import Group, PermissionType, Resource, User
 from .passbolt_shell import PassboltShell
-from .resources import add_resource, decrypt_resource, search_resources, share_resource
+from .resources import add_resource, decrypt_resource, search_resources, share_resource, validate_resource
 from .services import get_groups, get_resources, get_users
 from .utils import encrypt, encrypt_for_user, obj_to_tuples
 from .validators import validate_http_url, validate_non_empty
@@ -366,12 +366,26 @@ def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
             else:
                 yield host, username, password, description, product
 
+    tag = [('#' + t if not t.startswith('#') else t) for t in tag]
+
+    click.echo("Checking if file to import is valid... ")
+
     with open(path) as resource_file:
         resource_lines = resource_file.readlines()
 
+    resources = []
     try:
-        for resource in get_resources(resource_lines):
-            pass
+        # Start counting at line 2 because of the header line
+        for lineno, (host, username, password, description, product) in enumerate(get_resources(resource_lines), 2):
+            resource = Resource(id=None, uri=host, name=product, description=description, username=username,
+                                secret=password, encrypted_secret=None, tags=tag)
+
+            try:
+                validate_resource(resource)
+            except ValidationError as e:
+                raise click.ClickException("Error on line {}. {}".format(lineno, e))
+            else:
+                resources.append(resource)
     except ImportParseError as e:
         raise click.ClickException(
             "Could not split line {} of {} in 5 parts. Please check that it contains 4 tabs.".format(e.lineno, path)
@@ -385,11 +399,7 @@ def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
     recipients = sharing_dialog(get_default_owners(ctx.obj['config'], context),
                                 get_default_readers(ctx.obj['config'], context), context)
 
-    tag = [('#' + t if not t.startswith('#') else t) for t in tag]
-
-    for host, username, password, description, product in get_resources(resource_lines):
-        resource = Resource(id=None, uri=host, name=product, description=description, username=username,
-                            secret=password, encrypted_secret=None, tags=tag)
+    for resource in resources:
         new_resource = add_resource(
             resource,
             functools.partial(encrypt, fingerprint=context.session.user_fingerprint, gpg=ctx.obj['gpg']),

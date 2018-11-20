@@ -9,7 +9,7 @@ class DecryptionError(WrenchError):
     ...
 
 
-class InputValidationError(WrenchError):
+class ValidationError(WrenchError):
     ...
 
 

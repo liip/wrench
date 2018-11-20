@@ -1,10 +1,10 @@
 import pytest
 import wrench.validators
-from wrench.exceptions import InputValidationError
+from wrench.exceptions import ValidationError
 
 
 def test_validate_non_empty_raises_error_for_empty_value():
-    with pytest.raises(InputValidationError):
+    with pytest.raises(ValidationError):
         wrench.validators.validate_non_empty('')
 
 
@@ -13,12 +13,12 @@ def test_validate_non_empty_does_not_raise_error_for_non_empty_value():
 
 
 def test_validate_http_url_raises_error_for_non_http_url():
-    with pytest.raises(InputValidationError):
+    with pytest.raises(ValidationError):
         wrench.validators.validate_http_url('ftp://localhost')
 
 
 def test_validate_http_url_raises_error_for_non_url():
-    with pytest.raises(InputValidationError):
+    with pytest.raises(ValidationError):
         wrench.validators.validate_http_url('localhost')
 
 
@@ -31,12 +31,12 @@ def test_validate_http_url_does_not_raise_error_for_https_url():
 
 
 def test_validate_recipients_raises_error_for_invalid_choices():
-    with pytest.raises(InputValidationError):
+    with pytest.raises(ValidationError):
         wrench.validators.validate_recipients('jane.doe@example.com', {'john.doe@example.com': 'John'})
 
 
 def test_validate_recipients_raises_error_if_one_invalid_choice():
-    with pytest.raises(InputValidationError):
+    with pytest.raises(ValidationError):
         wrench.validators.validate_recipients(
             'jane.doe@example.com, john.doe@example.com', {'john.doe@example.com': 'John'}
         )
