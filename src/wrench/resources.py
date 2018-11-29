@@ -17,7 +17,7 @@
 
 from typing import Callable, Iterable, Sequence, Tuple, Union
 
-from gnupg import GPG
+from pretty_bad_protocol.gnupg import GPG
 
 from . import utils
 from .context import Context

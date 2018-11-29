@@ -17,7 +17,7 @@
 
 from typing import Any, Dict, Iterable, Sequence, Tuple, Type, TypeVar
 
-from gnupg import GPG
+from pretty_bad_protocol.gnupg import GPG
 
 from .exceptions import DecryptionError
 from .users import User

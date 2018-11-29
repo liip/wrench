@@ -467,7 +467,7 @@ def diagnose(ctx: Any):
         return __version__
 
     def python_gnupg_version():
-        from gnupg import __version__
+        from pretty_bad_protocol.gnupg import __version__
         return __version__
 
     def requests_gpgauthlib_version():
@@ -526,7 +526,7 @@ def diagnose(ctx: Any):
         server_key_fingerprint = ctx.obj['config']['auth']['server_fingerprint']
         public_keys = ctx.obj['gpg'].list_keys()
 
-        assert server_key_fingerprint in {key['fingerprint'] for key in public_keys}, "server key not found in keychain"
+        assert server_key_fingerprint in public_keys.fingerprints, "server key not found in keychain"
 
         return server_key_fingerprint
 

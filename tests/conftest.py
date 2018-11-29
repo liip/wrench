@@ -24,7 +24,7 @@ from unittest.mock import patch, Mock  # noqa
 import pytest
 import wrench.commands
 from click.testing import CliRunner
-from gnupg import GPG
+from pretty_bad_protocol.gnupg import GPG
 from wrench.models import User
 from wrench.utils import decrypt
 
@@ -56,7 +56,7 @@ class GpgSandbox:
         os.chmod(tmpdir, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
 
         self.homedir = tmpdir
-        self.gpg = GPG(gnupghome=tmpdir)
+        self.gpg = GPG(homedir=tmpdir)
         self.keys = self.import_keys(keys_dir)
 
     def get_key_files(self, keys_dir: str) -> Iterable[str]:
