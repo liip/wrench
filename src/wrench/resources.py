@@ -23,7 +23,7 @@ from . import utils
 from .context import Context
 from .exceptions import ValidationError
 from .models import Group, Permission, PermissionType, Resource, Secret, User
-from .services import add_resource as add_resource_service
+from .services import add_resource as add_resource_service, del_resource as del_resource_service
 from .services import get_permissions
 from .services import share_resource as share_resource_service
 from .users import unfold_groups
@@ -111,6 +111,10 @@ def share_resource(resource: Resource, recipients: Iterable[Tuple[Union[User, Gr
 def add_resource(resource: Resource, encrypt_func: Callable[[str], str], context: Context) -> Resource:
     resource = resource._replace(encrypted_secret=encrypt_func(resource.secret))
     return add_resource_service(context.session, resource)
+
+
+def del_resource(resource_id: str, context: Context) -> None:
+    return del_resource_service(context.session, resource_id)
 
 
 def validate_resource(resource: Resource):

@@ -35,7 +35,7 @@ from .exceptions import DecryptionError, FingerprintMismatchError, HttpRequestEr
 from .io import ask_question, input_recipients, split_csv
 from .models import Group, PermissionType, Resource, User
 from .passbolt_shell import PassboltShell
-from .resources import add_resource, decrypt_resource, search_resources, share_resource, validate_resource
+from .resources import add_resource, decrypt_resource, del_resource, search_resources, share_resource, validate_resource
 from .services import get_groups, get_resources, get_users
 from .utils import encrypt, encrypt_for_user, obj_to_tuples
 from .validators import validate_http_url, validate_non_empty
@@ -324,6 +324,22 @@ def add(ctx: Any) -> None:
                 nb_users = len(recipients) - nb_groups
                 print_success("\nResource successfully shared with {} users and {} groups.".format(nb_users, nb_groups))
 
+@cli.command()
+@click.argument('resource_id')
+@click.pass_context
+def delete(ctx: Any, resource_id: str) -> None:
+    """
+    Delete resources by id
+    """
+    context = get_context(ctx.obj)
+    session = context.session
+
+    try:
+        deleted_resource = del_resource(resource_id, context)
+    except HttpRequestError as e:
+        raise click.ClickException("Error while deleting resource: %s." % e.response.text)
+
+    print_success("\nResource '{}' successfully deleted.\n".format(resource_id))
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))

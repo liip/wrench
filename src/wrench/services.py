@@ -40,6 +40,12 @@ def add_resource(session: GPGAuthSession, resource: Resource) -> Resource:
 
     return resource
 
+def del_resource(session: GPGAuthSession, resource_id: str) -> None:
+    """
+    Delete the given `resource` from Passbolt.
+    """
+    return passbolt_api.del_resource(session, resource_id)
+
 
 def get_resources(session: GPGAuthSession, favourite_only: bool = False) -> Iterable[Resource]:
     """

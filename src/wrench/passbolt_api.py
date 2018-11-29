@@ -132,6 +132,13 @@ def add_resource(session: GPGAuthSession, resource_data: Mapping[str, Any]) -> D
     return get_passbolt_response(session, '/resources.json', method='post', json=resource_data)
 
 
+def del_resource(session: GPGAuthSession, resource_id: str) -> Iterable[Mapping[str, Any]]:
+    """
+    Delete the given resource from Passbolt.
+    """
+    return get_passbolt_response(session, '/resources/{}.json'.format(resource_id), method='delete')
+
+
 def get_resource_permissions(session: GPGAuthSession, resource_id: str) -> Iterable[Mapping[str, Any]]:
     """
     Return the existing permissions of the given resource id.
