@@ -17,27 +17,27 @@
 
 from typing import Any, Dict, Iterable
 
-from .exceptions import InputValidationError
+from .exceptions import ValidationError
 from .users import User
 
 
 def validate_non_empty(value: str) -> str:
     """
-    Return the given value or raise :exc:`InputValidationError` if the given value is empty.
+    Return the given value or raise :exc:`ValidationError` if the given value is empty.
     """
     if not value:
-        raise InputValidationError("This field is mandatory.")
+        raise ValidationError("This field is mandatory.")
 
     return value
 
 
 def validate_http_url(value: str) -> str:
     """
-    Return the given value or raise :exc:`InputValidationError` if the given URL doesn't start with http:// or
+    Return the given value or raise :exc:`ValidationError` if the given URL doesn't start with http:// or
     https://.
     """
     if not value.startswith('http://') and not value.startswith('https://'):
-        raise InputValidationError("The value must be a valid HTTP URL.")
+        raise ValidationError("The value must be a valid HTTP URL.")
 
     return value
 
@@ -55,6 +55,6 @@ def validate_recipients(value: str, recipients_dict: Dict[str, Any]) -> Iterable
     try:
         selected_users = [recipients_dict[recipient.strip()] for recipient in value.split(',')]
     except KeyError as e:
-        raise InputValidationError("Recipient {} is invalid.".format(e.args[0]))
+        raise ValidationError("Recipient {} is invalid.".format(e.args[0]))
 
     return selected_users

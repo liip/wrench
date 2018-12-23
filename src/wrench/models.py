@@ -54,5 +54,6 @@ class GpgKey(IdEqualityMixin, namedtuple('GpgKey', 'id fingerprint armored_key')
 
 
 PermissionType = Enum('PermissionType', [('READ', 1), ('UPDATE', 7), ('OWNER', 15)])
+PermissionModificationType = Enum('PermissionModificationType', 'create update delete')
 Secret = namedtuple('Secret', 'resource recipient secret')
-Permission = namedtuple('Permission', 'resource recipient permission_type')
+Permission = namedtuple('Permission', 'id resource recipient permission_type')

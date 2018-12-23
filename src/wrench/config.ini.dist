@@ -5,4 +5,5 @@ http_username = john.doe
 http_password = 1234
 
 [sharing]
-default_recipients = Liipers
+default_owners = Liipers
+default_readers = Liipers

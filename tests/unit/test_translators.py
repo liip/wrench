@@ -119,8 +119,10 @@ def test_to_local_group():
 def test_to_local_permission(users):
     group = GroupFactory(name='All', members_ids=[user.id for user in users])
     resource = ResourceFactory()
-    permission = Permission(resource=resource, recipient=users[0], permission_type=PermissionType(15))
-    permission_data = {'aco_foreign_key': resource.id, 'aro': 'User', 'type': '15', 'aro_foreign_key': users[0].id}
+    permission = Permission(id='42', resource=resource, recipient=users[0], permission_type=PermissionType(15))
+    permission_data = {
+        'id': '42', 'aco_foreign_key': resource.id, 'aro': 'User', 'type': '15', 'aro_foreign_key': users[0].id
+    }
     users_cache = {user.id: user for user in users}
     groups_cache = {group.id: group}
 

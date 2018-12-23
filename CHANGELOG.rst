@@ -1,6 +1,13 @@
 Changelog
 =========
 
+dev
+---
+
+**Improvements**
+
+- Allow to set owners and readers when sharing a resource
+
 0.2.0 (2018-12-21)
 ------------------
 

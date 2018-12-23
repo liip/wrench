@@ -99,4 +99,4 @@ def to_local_permission(permission_data: Mapping[str, Any], groups_cache: Mappin
 
     recipient = cache[permission_data['aro_foreign_key']]
 
-    return Permission(resource=resource, recipient=recipient, permission_type=permission_type)
+    return Permission(id=permission_data['id'], resource=resource, recipient=recipient, permission_type=permission_type)

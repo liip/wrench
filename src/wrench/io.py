@@ -21,7 +21,7 @@ from typing import Any, Callable, Dict, Iterable, Optional, List, Union  # noqa
 
 import click
 
-from .exceptions import InputValidationError
+from .exceptions import ValidationError
 from .users import Group, User
 from .validators import validate_recipients
 
@@ -29,19 +29,19 @@ from .validators import validate_recipients
 def ask_question(label: str, secret: bool = False, processors: Optional[Iterable[Callable[[str], Any]]] = None) -> Any:
     """
     Display the given `label`, wait for user input, call the given `processors` on the entered value until no processor
-    raises :exc:`InputValidationError`, and return the transformed value.
+    raises :exc:`ValidationError`, and return the transformed value.
     """
     func = getpass if secret else input
     valid_input = False
 
     while not valid_input:
-        value = func(label + ": ")  # type: ignore
+        value = func(label + ": ") if label else func()  # type: ignore
 
         try:
             if processors:
                 for processor in processors:
                     value = processor(value)
-        except InputValidationError as e:
+        except ValidationError as e:
             click.echo(str(e))
         else:
             valid_input = True
@@ -74,7 +74,7 @@ def input_recipients(users: Iterable[User], groups: Iterable[Group]) -> List[Uni
 
     init_autocomplete(recipients_dict.keys())
 
-    return ask_question(label="Recipients", processors=[
+    return ask_question(label="", processors=[
         lambda value: validate_recipients(value, recipients_dict),
     ])
 

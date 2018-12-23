@@ -81,6 +81,7 @@ class PermissionFactory(factory.Factory):
     class Meta:
         model = Permission
 
+    id = None
     resource = factory.SubFactory(ResourceFactory)
     recipient = factory.SubFactory(UserFactory)
     permission_type = PermissionType.OWNER.value
