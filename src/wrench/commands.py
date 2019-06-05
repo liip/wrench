@@ -259,7 +259,8 @@ def search(ctx: Any, terms: Iterable[str], favourite: bool) -> None:
 
     for resource in search_resources(resources, terms):
         try:
-            click.echo("\n".join(get_fields_for_display(decrypt_resource(resource, ctx.obj['gpg']))) + "\n")
+            resource = decrypt_resource(resource=resource, gpg=ctx.obj['gpg'], context=context)
+            click.echo("\n".join(get_fields_for_display(resource)) + "\n")
         except DecryptionError:
             click.secho("Resource with id {} could not be decrypted.".format(resource.id), fg='red')
 

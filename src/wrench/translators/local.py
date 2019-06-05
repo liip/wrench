@@ -26,17 +26,18 @@ def to_local_resource(data: Dict[str, Any]) -> Resource:
     Return a :class:`Resource` object created from the values from the given `data`. which is expected to be a dict
     with the following keys (extra fields are ignored)::
 
-        ('id', 'name', 'uri', 'description', 'username', 'secrets', 'tags')
+        ('id', 'name', 'uri', 'description', 'username', 'tags')
 
-    The `secrets` key is expected to contain a list of dicts in the form `{'data': '...'}`.
     """
     tags = [tag['slug'] for tag in data.pop('tags', [])]
 
     # Make sure the exception is the same whether the secret or any other field is missing
     try:
-        resource_data = dict(data, secret=None, encrypted_secret=data['secrets'][0]['data'], tags=tags)
+        encrypted_secret = data['secrets'][0]['data']
     except (IndexError, KeyError):
-        resource_data = dict(data, secret=None, tags=tags)
+        encrypted_secret = None
+
+    resource_data = dict(data, secret=None, encrypted_secret=encrypted_secret, tags=tags)
 
     return utils.dict_to_namedtuple(Resource, resource_data)
 

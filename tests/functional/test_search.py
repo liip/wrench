@@ -21,6 +21,7 @@ def test_search_doesnt_include_non_matching_resources(cli, gpg, users, api):
 def test_search_includes_matching_resources(cli, gpg, users, api):
     resource = EncryptedResourceFactory(gpg=gpg, recipient=users[0].username, name='bank account')
     api.endpoints['get_resources'] = [to_foreign_resource_response(resource)]
+    api.endpoints['get_resource_secret'] = {'data': resource.encrypted_secret}
 
     result = cli('search', ['bank'])
 
