@@ -19,9 +19,10 @@ import functools
 import logging
 import os
 import re
+import string
 import sys
 from enum import Enum
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Callable, Dict, Iterable, List, Tuple, Union
 
 import click
 import requests
@@ -32,7 +33,7 @@ from requests_gpgauthlib.utils import create_gpg, get_workdir, import_user_priva
 from .config import create_config, parse_config
 from .context import Context
 from .exceptions import DecryptionError, FingerprintMismatchError, HttpRequestError, ImportParseError, ValidationError
-from .io import ask_question, input_recipients, split_csv
+from .io import ask_question, getch, input_recipients, split_csv
 from .models import Group, PermissionType, Resource, User
 from .passbolt_shell import PassboltShell
 from .resources import add_resource, decrypt_resource, search_resources, share_resource, validate_resource
@@ -197,6 +198,62 @@ def sharing_dialog(default_owners: List[Union[Group, User]], default_readers: Li
     return owners + readers
 
 
+def _get_resource_field_for_display(field: str, value: str) -> str:
+    colors = {
+        'uri': 'yellow',
+        'username': 'blue',
+        'description': 'green',
+        'name': 'red',
+    }
+
+    if field == 'secret':
+        kwargs = {'fg': 'red', 'bg': 'red'}  # type: Dict[str, Any]
+    else:
+        kwargs = {'fg': colors.get(field, 'white'), 'bold': True}
+
+    # Prevent None values from making the call raise an exception
+    return click.style(value if value else '', **kwargs)
+
+
+def _get_resource_fields_for_display(resource: Resource) -> Iterable[str]:
+    resource_fields = obj_to_tuples(resource, ('name', 'id', 'uri', 'username', 'secret', 'description'))
+    longest_field = max(len(field) for field, _ in resource_fields)
+
+    return ("{}: {}".format(
+        field.ljust(longest_field + 1), _get_resource_field_for_display(field, value)
+    ) for field, value in resource_fields)
+
+
+def _print_resource_short(id: str, resource: Resource) -> None:
+    resource_title = click.style(resource.name or "<untitled>", bold=True) + (
+        " ({})".format(resource.username) if resource.username else ""
+    )
+    fields_values = (resource_title,)  # type: Tuple[str, ...]
+    if resource.description:
+        fields_values += (resource.description.replace("\n", ", "),)
+
+    fields_values_text = "\n    ".join(fields_values)
+    click.echo("[{}] {}".format(click.style(id, fg='yellow'), fields_values_text))
+
+
+def _select_resource(numbered_resources: Iterable[Tuple[str, Resource]]) -> Resource:
+    numbered_resources_dict = dict(numbered_resources)
+
+    while True:
+        choice = getch()
+
+        # \x03 is C-c
+        if choice in ['q', '\x03']:
+            raise KeyboardInterrupt()
+
+        try:
+            resource = numbered_resources_dict[choice]
+        except KeyError:
+            pass
+        else:
+            return resource
+
+
 @click.group(context_settings={'help_option_names': ['-h', '--help']})
 @click.option('-v', '--verbose', count=True, help="Make it verbose. Repeat up to 3 times to increase verbosity.")
 @click.option('--version', is_flag=True, expose_value=False, callback=print_version, is_eager=True,
@@ -223,45 +280,66 @@ def cli(ctx: Any, verbose: bool) -> None:
 
 @cli.command()
 @click.argument('terms', nargs=-1)
-@click.option('--favourite', is_flag=True)
+@click.option('--favourite', is_flag=True, help="Only search in resources marked as favourite in Passbolt.")
+@click.option('--field', type=click.Choice(['name', 'username', 'uri', 'description']), multiple=True,
+              help="Only search in specified fields.")
 @click.pass_context
-def search(ctx: Any, terms: Iterable[str], favourite: bool) -> None:
+def search(ctx: Any, terms: Iterable[str], field: Iterable[str], favourite: bool) -> None:
     """
     Search for entries matching the given terms.
+
+    You can restrict the fields to search in by using the `--field` option. Repeat it to include multiple fields. For
+    example, the following will search all entries that contain "root" either in the uri or in the username fields:
+
+    wrench search --field username --field uri root
+
+    The default behaviour is to search in all fields.
     """
-    def get_field_for_display(field: str, value: str) -> str:
-        colors = {
-            'uri': 'yellow',
-            'username': 'blue',
-            'description': 'green',
-            'name': 'red',
-        }
 
-        if field == 'secret':
-            kwargs = {'fg': 'red', 'bg': 'red'}  # type: Dict[str, Any]
-        else:
-            kwargs = {'fg': colors.get(field, 'white'), 'bold': True}
-
-        # Prevent None values from making the call raise an exception
-        return click.style(value if value else '', **kwargs)
-
-    def get_fields_for_display(resource: Resource) -> Iterable[str]:
-        resource_fields = obj_to_tuples(resource, ('name', 'id', 'uri', 'username', 'secret', 'description'))
-        longest_field = max(len(field) for field, _ in resource_fields)
-
-        return ("{}: {}".format(
-            field.ljust(longest_field + 1), get_field_for_display(field, value)
-        ) for field, value in resource_fields)
-
-    terms = ' '.join(terms)
     context = get_context(ctx.obj)
     resources = get_resources(context.session, favourite_only=favourite)
 
-    for resource in search_resources(resources, terms):
+    terms = ' '.join(terms)
+    matching_resources = search_resources(resources, terms)
+
+    choices = [
+        letter for letter in (string.digits + string.ascii_letters) if letter.lower() != 'q'
+    ]
+    numbered_resources = list(zip(choices, matching_resources))
+
+    for number, resource in numbered_resources:
+        _print_resource_short(number, resource)
+
+    if len(matching_resources) > len(choices):
+        click.secho("\nWarning: showing only {} choices out of {} results. Please refine your search.".format(
+            len(choices), len(matching_resources)
+        ), fg='yellow')
+    click.echo("\nChoose an entry to display, or [q] to quit.", nl=False)
+
+    try:
+        resource = _select_resource(numbered_resources)
+    except KeyboardInterrupt:
+        return
+
+    click.echo("\n\nDecrypting...")
+    try:
+        resource = decrypt_resource(resource=resource, gpg=ctx.obj['gpg'], context=context)
+    except DecryptionError:
+        click.secho("Resource with id {} could not be decrypted.".format(resource.id), fg='red')
+
+    click.echo("\n".join(_get_resource_fields_for_display(resource)))
+
+    if resource.secret:
         try:
-            click.echo("\n".join(get_fields_for_display(decrypt_resource(resource, ctx.obj['gpg']))) + "\n")
-        except DecryptionError:
-            click.secho("Resource with id {} could not be decrypted.".format(resource.id), fg='red')
+            import pyperclip
+        except ImportError:
+            click.echo(
+                "\nHint: install pyperclip (see https://github.com/liip/wrench) to automatically copy the password to "
+                "the clipboard."
+            )
+        else:
+            pyperclip.copy(resource.secret)
+            click.secho("\nPassword has been copied to the clipboard.", fg='green')
 
 
 @cli.command()

@@ -132,6 +132,7 @@ class ApiStub:
         'add_resource': {},
         'get_resource_permissions': [],
         'add_tags': {},
+        'get_resource_secret': {},
     }  # type: Dict[str, Any]
 
     def __init__(self):

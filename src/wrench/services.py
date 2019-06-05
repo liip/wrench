@@ -48,6 +48,13 @@ def get_resources(session: GPGAuthSession, favourite_only: bool = False) -> Iter
     return [to_local(resource, Resource) for resource in passbolt_api.get_resources(session, favourite_only)]
 
 
+def get_resource_secret(session: GPGAuthSession, resource_id: str) -> str:
+    """
+    Return the encrypted secret of the given `resource_id`.
+    """
+    return passbolt_api.get_resource_secret(session, resource_id)['data']
+
+
 def get_users(session: GPGAuthSession) -> Iterable[User]:
     """
     Return :class:`User` objects from Passbolt.
