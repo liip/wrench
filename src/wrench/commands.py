@@ -261,8 +261,7 @@ def search(ctx: Any, terms: Iterable[str], favourite: bool) -> None:
         try:
             click.echo("\n".join(get_fields_for_display(decrypt_resource(resource, ctx.obj['gpg']))) + "\n")
         except DecryptionError:
-            click.echo(click.style('coucou!', fg='red'))
-            click.echo("Resource with id {} could not be decrypted.".format(resource.id))
+            click.secho("Resource with id {} could not be decrypted.".format(resource.id), fg='red')
 
 
 @cli.command()
