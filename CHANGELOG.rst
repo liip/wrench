@@ -1,6 +1,17 @@
 Changelog
 =========
 
+0.4.0 (2019-09-12)
+------------------
+
+**Improvements**
+
+- Make search interactive (and faster)
+
+**Bugfixes**
+
+- Allow passwords with ``%`` characters in the configuration file
+
 0.3.0 (2018-12-23)
 ------------------
 
