@@ -23,7 +23,7 @@ def parse_config(path: str) -> Dict[str, Dict[str, str]]:
     """
     Parse the config file located in `path` and return a dict in the form {'section': {'key1': 'value1'}}.
     """
-    config = configparser.ConfigParser()
+    config = configparser.RawConfigParser()
     with open(path) as f:
         config.read_file(f)
 
@@ -36,7 +36,7 @@ def create_config(path: str, config_dict: Dict[str, Dict[str, str]]) -> None:
     file is an ini file, with sections being the keys of the given `config_dict`, and the options and their values
     being the keys and values of the associated dict.
     """
-    config = configparser.ConfigParser()
+    config = configparser.RawConfigParser()
     config.read_dict(config_dict)
 
     with open(path, 'w') as f:
