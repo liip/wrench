@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.4.1 (2019-09-12)
+------------------
+
+**Bugfixes**
+
+- Implement ``--field`` option to search command
+
 0.4.0 (2019-09-12)
 ------------------
 

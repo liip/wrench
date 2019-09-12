@@ -300,7 +300,11 @@ def search(ctx: Any, terms: Iterable[str], field: Iterable[str], favourite: bool
     resources = get_resources(context.session, favourite_only=favourite)
 
     terms = ' '.join(terms)
-    matching_resources = search_resources(resources, terms)
+    search_kwargs = {'resources': resources, 'terms': terms}
+    if field:
+        search_kwargs['fields'] = field
+
+    matching_resources = search_resources(**search_kwargs)
 
     choices = [
         letter for letter in (string.digits + string.ascii_letters) if letter.lower() != 'q'

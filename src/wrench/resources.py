@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-from typing import Callable, Iterable, Sequence, Tuple, Union
+from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 from gnupg import GPG
 
@@ -29,11 +29,12 @@ from .services import share_resource as share_resource_service
 from .users import unfold_groups
 
 
-def resource_matches(resource: Resource, terms: str) -> bool:
+def resource_matches(resource: Resource, terms: str,
+                     fields: Tuple[str] = ('name', 'username', 'uri', 'description')) -> bool:
     """
     Return `True` if terms are found in the given resource. Search is case insensitive, and terms are split at the
-    space character. The resource matches only if all given terms are found in the combination of all the resource
-    fields.
+    space character. The resource matches only if all given terms are found in the combination of all the given
+    `fields`.
     """
     if not terms:
         return True
@@ -41,7 +42,7 @@ def resource_matches(resource: Resource, terms: str) -> bool:
     terms_list = terms.casefold().split(' ')
     resource_str = ' '.join(
         value.casefold() for value in (
-            getattr(resource, attr) for attr in ('name', 'username', 'uri', 'description')
+            getattr(resource, attr) for attr in fields
         )
         if value
     )
@@ -49,11 +50,17 @@ def resource_matches(resource: Resource, terms: str) -> bool:
     return all(term in resource_str for term in terms_list)
 
 
-def search_resources(resources: Iterable[Resource], terms: str) -> Sequence[Resource]:
+def search_resources(resources: Iterable[Resource], terms: str,
+                     fields: Optional[Tuple[str]] = None) -> Sequence[Resource]:
     """
     Return a sequence of resources matching the given `terms`.
     """
-    return [resource for resource in resources if resource_matches(resource, terms)]
+    args = {'terms': terms}
+
+    if fields:
+        args['fields'] = fields
+
+    return [resource for resource in resources if resource_matches(**{'resource': resource, **args})]
 
 
 def decrypt_resource(resource: Resource, gpg: GPG, context: Context) -> Resource:
