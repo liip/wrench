@@ -15,6 +15,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
+import functools
 from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 from gnupg import GPG
@@ -30,7 +31,7 @@ from .users import unfold_groups
 
 
 def resource_matches(resource: Resource, terms: str,
-                     fields: Tuple[str] = ('name', 'username', 'uri', 'description')) -> bool:
+                     fields: Tuple[str, ...] = ('name', 'username', 'uri', 'description')) -> bool:
     """
     Return `True` if terms are found in the given resource. Search is case insensitive, and terms are split at the
     space character. The resource matches only if all given terms are found in the combination of all the given
@@ -51,16 +52,16 @@ def resource_matches(resource: Resource, terms: str,
 
 
 def search_resources(resources: Iterable[Resource], terms: str,
-                     fields: Optional[Tuple[str]] = None) -> Sequence[Resource]:
+                     fields: Optional[Tuple[str, ...]] = None) -> Sequence[Resource]:
     """
     Return a sequence of resources matching the given `terms`.
     """
-    args = {'terms': terms}
+    resource_matches_partial = functools.partial(resource_matches, terms=terms)
 
     if fields:
-        args['fields'] = fields
+        resource_matches_partial = functools.partial(resource_matches_partial, fields=fields)
 
-    return [resource for resource in resources if resource_matches(**{'resource': resource, **args})]
+    return [resource for resource in resources if resource_matches_partial(resource=resource)]
 
 
 def decrypt_resource(resource: Resource, gpg: GPG, context: Context) -> Resource:

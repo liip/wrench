@@ -300,11 +300,8 @@ def search(ctx: Any, terms: Iterable[str], field: Iterable[str], favourite: bool
     resources = get_resources(context.session, favourite_only=favourite)
 
     terms = ' '.join(terms)
-    search_kwargs = {'resources': resources, 'terms': terms}
-    if field:
-        search_kwargs['fields'] = field
-
-    matching_resources = search_resources(**search_kwargs)
+    search_resources_partial = functools.partial(search_resources, resources=resources, terms=terms)
+    matching_resources = search_resources_partial(fields=field) if field else search_resources_partial()
 
     choices = [
         letter for letter in (string.digits + string.ascii_letters) if letter.lower() != 'q'
