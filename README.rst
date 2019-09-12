@@ -7,29 +7,36 @@ Installation
 Before installing wrench, make sure your system has the following software installed:
 
 - `Python <https://www.python.org/downloads/>`_ (version >= 3.5)
-- `pipsi <https://github.com/mitsuhiko/pipsi>`_
+- `pipx <https://github.com/pipxproject/pipx>`_
 - `GnuPG <https://gnupg.org/>`_ (version >= 2.1)
 
-If you already have pipsi installed, you can skip the next section and jump
+If you already have pipx installed, you can skip the next section and jump
 straight to `Installing wrench`_.
 
-Installing pipsi
-~~~~~~~~~~~~~~~~
+Installing pipx
+~~~~~~~~~~~~~~~
 
-If you're lucky enough to have a package manager, you should use it. If you're using Debian or Ubuntu::
+Open a terminal and run the following commands::
 
-  sudo apt install pipsi
+  python3 -m pip install --user pipx
+  python3 -m pipx ensurepath
 
-Otherwise follow the official installation method::
+Try running ``pipx --version`` to make sure it's installed correctly.
 
-  curl https://raw.githubusercontent.com/mitsuhiko/pipsi/master/get-pipsi.py | python
+.. note::
+
+   If you previously installed wrench using pipsi, uninstall it first by running ``pipsi uninstall wrench``.
 
 Installing wrench
 ~~~~~~~~~~~~~~~~~
 
 You can now install wrench by running the following command::
 
-  pipsi install passbolt-wrench
+  pipx install passbolt-wrench
+
+If you want to have passwords copied automatically to the clipboard, install ``pyperclip``::
+
+  pipx inject passbolt-wrench pyperclip
 
 Then go to your Passbolt instance, export your private key and run ``wrench
 import_key /path/to/your/key.asc`` (you'll be prompted to enter some
@@ -55,12 +62,12 @@ Add a resource::
   URI: http://example.com
   Description: My private bank account
   Username: john.doe
-  Secret: 
+  Secret:
 
   Entry 'Bank account' successfully saved.
 
   If you would like to share it, enter e-mail addresses below, separated by commas. Auto completion through Tab key is supported.
-  Recipients: 
+  Recipients:
 
 To see the list of all wrench commands, run `wrench` without any argument.
 
