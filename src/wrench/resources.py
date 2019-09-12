@@ -24,7 +24,7 @@ from .context import Context
 from .exceptions import ValidationError
 from .models import Group, Permission, PermissionType, Resource, Secret, User
 from .services import add_resource as add_resource_service
-from .services import get_permissions
+from .services import get_permissions, get_resource_secret
 from .services import share_resource as share_resource_service
 from .users import unfold_groups
 
@@ -56,11 +56,17 @@ def search_resources(resources: Iterable[Resource], terms: str) -> Sequence[Reso
     return [resource for resource in resources if resource_matches(resource, terms)]
 
 
-def decrypt_resource(resource: Resource, gpg: GPG) -> Resource:
+def decrypt_resource(resource: Resource, gpg: GPG, context: Context) -> Resource:
     """
-    Return a new `Resource` object with its field `secret` decrypted.
+    Decrypt the secret of the given `resource` and set it in clear text in the `secret` field. If the `secret` field is
+    already populated, no decryption is done and the resource is returned unchanged.
     """
-    return resource._replace(secret=utils.decrypt(resource.encrypted_secret, gpg))
+    if resource.secret is not None:
+        return resource
+
+    return resource._replace(
+        secret=utils.decrypt(data=get_resource_secret(session=context.session, resource_id=resource.id), gpg=gpg)
+    )
 
 
 def share_resource(resource: Resource, recipients: Iterable[Tuple[Union[User, Group], PermissionType]],

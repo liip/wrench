@@ -72,11 +72,18 @@ def get_resources(session: GPGAuthSession, favourite_only: bool) -> Iterable[Dic
     """
     Return a list of resource dicts from Passbolt.
     """
-    params = {'contain[secret]': 1, 'contain[tag]': 1}
+    params = {'contain[tag]': 1}
     if favourite_only:
         params['filter[is-favorite]'] = 1
 
     return get_passbolt_response(session, '/resources.json', params)
+
+
+def get_resource_secret(session: GPGAuthSession, resource_id: str) -> Dict[str, Any]:
+    """
+    Return a resource secret dict from Passbolt.
+    """
+    return get_passbolt_response(session, '/secrets/resource/{}.json'.format(resource_id))
 
 
 def share_resource(session: GPGAuthSession, resource_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
