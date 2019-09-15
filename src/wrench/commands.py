@@ -633,7 +633,7 @@ def main() -> None:
         cli(obj={})
     except GPGAuthNoSecretKeyError:
         click.secho(
-            "Error: no secret key available. Please export your key in Passbolt and run `wrench import_key "
+            "Error: no secret key available. Please export your key in Passbolt and run `wrench import-key "
             "<path_to_key>`.", err=True
         )
         sys.exit(ExitStatus.NO_SECRET_KEY.value)
