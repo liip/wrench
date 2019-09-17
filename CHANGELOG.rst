@@ -1,6 +1,13 @@
 Changelog
 =========
 
+dev (unreleased)
+----------------
+
+**Improvements**
+
+- Do not show resource selection if only one resource matches a search
+
 0.4.1 (2019-09-12)
 ------------------
 

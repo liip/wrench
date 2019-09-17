@@ -308,21 +308,31 @@ def search(ctx: Any, terms: Iterable[str], field: Iterable[str], favourite: bool
     ]
     numbered_resources = list(zip(choices, matching_resources))
 
-    for number, resource in numbered_resources:
-        _print_resource_short(number, resource)
+    if len(matching_resources) > 1:
+        for number, resource in numbered_resources:
+            _print_resource_short(number, resource)
 
     if len(matching_resources) > len(choices):
         click.secho("\nWarning: showing only {} choices out of {} results. Please refine your search.".format(
             len(choices), len(matching_resources)
         ), fg='yellow')
-    click.echo("\nChoose an entry to display, or [q] to quit.", nl=False)
 
-    try:
-        resource = _select_resource(numbered_resources)
-    except KeyboardInterrupt:
+    if len(matching_resources) == 0:
+        click.echo("Couldn't find any entry that matches your search.")
         return
+    elif len(matching_resources) == 1:
+        resource = matching_resources[0]
+    else:
+        click.echo("\nChoose an entry to display, or [q] to quit.", nl=False)
 
-    click.echo("\n\nDecrypting...")
+        try:
+            resource = _select_resource(numbered_resources)
+        except KeyboardInterrupt:
+            return
+
+        print("\n")
+
+    click.echo("Decrypting...")
     try:
         resource = decrypt_resource(resource=resource, gpg=ctx.obj['gpg'], context=context)
     except DecryptionError:
