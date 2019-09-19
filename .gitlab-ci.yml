@@ -1,3 +1,0 @@
-include:
-  - project: 'sysadmins/debifiers/common'
-    file: '/debify-gitlab-ci.yml'
