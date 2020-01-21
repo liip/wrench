@@ -39,7 +39,7 @@ If you want to have passwords copied automatically to the clipboard, install ``p
   pipx inject passbolt-wrench pyperclip
 
 Then go to your Passbolt instance, export your private key and run ``wrench
-import_key /path/to/your/key.asc`` (you'll be prompted to enter some
+import-key /path/to/your/key.asc`` (you'll be prompted to enter some
 configuration values the first time you run wrench).
 
 Usage
