@@ -69,6 +69,11 @@ Add a resource::
   If you would like to share it, enter e-mail addresses below, separated by commas. Auto completion through Tab key is supported.
   Recipients:
 
+Dump all resources::
+
+  $ wrench dump > dump.json
+
+
 To see the list of all wrench commands, run `wrench` without any argument.
 
 Common issues
