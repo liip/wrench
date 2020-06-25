@@ -21,6 +21,7 @@ import os
 import re
 import string
 import sys
+import json
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Union
 
@@ -276,6 +277,19 @@ def cli(ctx: Any, verbose: bool) -> None:
 
     if 'gpg' not in ctx.obj:
         ctx.obj['gpg'] = create_gpg(get_workdir())
+
+
+@cli.command()
+@click.pass_context
+def dump(ctx: Any) -> None:
+    """
+    Dump everything you have access to JSON
+    """
+
+    context = get_context(ctx.obj)
+    resources = get_resources(context.session)
+    json_dump = json.dumps([decrypt_resource(resource=resource, gpg=ctx.obj['gpg'], context=context)._asdict() for resource in resources])
+    print(json_dump)
 
 
 @cli.command()
