@@ -442,7 +442,7 @@ def import_key(ctx: Any, path: str) -> None:
 
 
 @cli.command()
-@click.argument('path', type=click.Path(exists=True))
+@click.argument('path', type=click.Path(allow_dash=True, exists=True))
 @click.option('--tag', '-t', multiple=True, help="Public tag to assign to the imported resources. Can be repeated"
                                                  " multiple times.")
 @click.pass_context
@@ -470,7 +470,7 @@ def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
 
     click.echo("Checking if file to import is valid... ")
 
-    with open(path) as resource_file:
+    with sys.stdin if path == '-' else open(path) as resource_file:
         resource_lines = resource_file.readlines()
 
     resources = []
@@ -492,12 +492,13 @@ def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
         )
 
     context = get_context(ctx.obj)
-    click.echo(
-        "If you would like to share the resources after import, enter e-mail addresses or group names below, separated"
-        " by commas. Auto completion through Tab key is supported.\n"
-    )
-    recipients = sharing_dialog(get_default_owners(ctx.obj['config'], context),
-                                get_default_readers(ctx.obj['config'], context), context)
+    if path != '-':
+        click.echo(
+            "If you would like to share the resources after import, enter e-mail addresses or group names below, separated"
+            " by commas. Auto completion through Tab key is supported.\n"
+        )
+        recipients = sharing_dialog(get_default_owners(ctx.obj['config'], context),
+                                    get_default_readers(ctx.obj['config'], context), context)
 
     for resource in resources:
         new_resource = add_resource(
@@ -505,10 +506,12 @@ def import_resources(ctx: Any, path: str, tag: List[str]) -> None:
             functools.partial(encrypt, fingerprint=context.session.user_fingerprint, gpg=ctx.obj['gpg']),
             context
         )
-        share_resource(new_resource, recipients, functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']), context,
-                       delete_existing_permissions=True)
 
-    nb_imported_resources = len(resource_lines) - 1
+        if path != '-':
+            share_resource(new_resource, recipients, functools.partial(encrypt_for_user, gpg=ctx.obj['gpg']), context,
+                           delete_existing_permissions=True)
+
+    nb_imported_resources = len(resources)
     click.echo("{} resources successfully imported.".format(nb_imported_resources))
 
 
