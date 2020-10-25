@@ -61,8 +61,13 @@ def get_session_from_ctx_obj(ctx_obj: Dict[str, Any], authenticate: bool = True)
     Return a `GPGAuthSession` from the given click context object. If `authenticate` is True, authentication will be
     made against the API.
     """
+    try:
+        fp = ctx_obj['config']['auth']['user_fingerprint']
+    except KeyError:
+        fp = None
+
     session = GPGAuthSession(
-        gpg=ctx_obj['gpg'], server_url=ctx_obj['config']['auth']['server_url'], user_fingerprint=ctx_obj['config']['auth']['user_fingerprint']
+        gpg=ctx_obj['gpg'], server_url=ctx_obj['config']['auth']['server_url'], user_fingerprint=fp
     )
 
     if ctx_obj['config']['auth']['http_username'] or ctx_obj['config']['auth']['http_password']:
