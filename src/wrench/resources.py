@@ -72,8 +72,21 @@ def decrypt_resource(resource: Resource, gpg: GPG, context: Context) -> Resource
     if resource.secret is not None:
         return resource
 
+    def is_json(myjson):
+      try:
+        json.loads(myjson)
+      except ValueError as e:
+        return False
+      return True
+
+    checkjson=utils.decrypt(data=get_resource_secret(session=context.session, resource_id=resource.id), gpg=gpg)
+    if is_json(checkjson):
+        validpassword=json.loads(checkjson)["password"]
+    else:
+        validpassword=checkjson
+
     return resource._replace(
-        secret=utils.decrypt(data=get_resource_secret(session=context.session, resource_id=resource.id), gpg=gpg)
+        secret=validpassword
     )
 
 
