@@ -28,6 +28,7 @@ from .services import add_resource as add_resource_service
 from .services import get_permissions, get_resource_secret
 from .services import share_resource as share_resource_service
 from .users import unfold_groups
+import json
 
 
 def resource_matches(resource: Resource, terms: str,
