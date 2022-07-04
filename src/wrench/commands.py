@@ -61,8 +61,13 @@ def get_session_from_ctx_obj(ctx_obj: Dict[str, Any], authenticate: bool = True)
     Return a `GPGAuthSession` from the given click context object. If `authenticate` is True, authentication will be
     made against the API.
     """
+    try:
+        fp = ctx_obj['config']['auth']['user_fingerprint']
+    except KeyError:
+        fp = None
+
     session = GPGAuthSession(
-        gpg=ctx_obj['gpg'], server_url=ctx_obj['config']['auth']['server_url']
+        gpg=ctx_obj['gpg'], server_url=ctx_obj['config']['auth']['server_url'], user_fingerprint=fp
     )
 
     if ctx_obj['config']['auth']['http_username'] or ctx_obj['config']['auth']['http_password']:
@@ -95,6 +100,7 @@ def config_values_wizard() -> Dict[str, Any]:
         ('server_fingerprint', ask_question(label="Passbolt server fingerprint", processors=[validate_non_empty])),
         ('http_username', ask_question(label="Username for HTTP auth")),
         ('http_password', ask_question(label="Password for HTTP auth", secret=True)),
+        ('user_fingerprint', ask_question(label="User identity (fingerprint)")),
     ])
     sharing_config = dict([
         ('default_recipients', ask_question(
@@ -151,6 +157,12 @@ def str_to_recipients(recipients_str: str, context: Context) -> List[Union[Group
 
     return recipient_objs
 
+
+def filter_keys(keys, fingerprint):
+    if not fingerprint:
+        return [keys[0]]
+
+    return [k for k in keys if k['fingerprint'] == fingerprint]
 
 def get_sharing_recipients(config: Dict, recipients_key: str, context: Context) -> List[Union[Group, User]]:
     try:
@@ -563,14 +575,20 @@ def diagnose(ctx: Any):
 
         return '.'.join(str(v) for v in version_number)
 
-    def test_secret_key():
+    def test_secret_key(preferred = None):
+        session = get_session_from_ctx_obj(ctx.obj, authenticate=False)
+
         secret_keys = ctx.obj['gpg'].list_keys(True)
+        secret_keys = filter_keys(secret_keys, session.user_specified_fingerprint)
         assert len(secret_keys) == 1, "only one secret key should exist, found {}".format(len(secret_keys))
-        return secret_keys[0]['fingerprint']
 
     def test_encryption():
+        session = get_session_from_ctx_obj(ctx.obj, authenticate=False)
+
         secret_keys = ctx.obj['gpg'].list_keys(True)
-        # TODO check if no secret key
+        secret_keys = filter_keys(secret_keys, session.user_specified_fingerprint)
+        assert len(secret_keys) == 1, "only one secret key should exist, found {}".format(len(secret_keys))
+
         secret_key = secret_keys[0]
         encrypted_data = ctx.obj['gpg'].encrypt('wrench', secret_key['fingerprint'], always_trust=True)
         assert encrypted_data.ok, "unable to encrypt data ({})".format(encrypted_data.status)
