@@ -1,6 +1,11 @@
 wrench: a CLI tool for Passbolt
 ===============================
 
+Project status: frozen
+----------------------
+
+The project is not in developement anymore by Liip. See https://github.com/liip/wrench/issues/30 for details; it needs a new maintaining team!
+
 Installation
 ------------
 
